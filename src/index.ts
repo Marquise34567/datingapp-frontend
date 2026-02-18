@@ -3,6 +3,7 @@ import express from "express";
 import cors from "cors";
 import { z } from "zod";
 import crypto from "crypto";
+import { coachRespond } from "./coachEngine";
 
 const app = express();
 
@@ -576,22 +577,7 @@ function inferToneFromHistory(history?: SessionData["conversationHistory"]) {
 	return "confident" as Tone;
 }
 
-function generateConversationalCoach(body: AdviceRequest, session?: SessionData) {
-	const inferredTone = normalizeTone(body.tone) as Tone;
-	const userMessage = (body.userMessage || "").trim();
-
-	const short = (text: string) => text.slice(0, 350); // force shorter replies
-
-	const recentTone = inferToneFromHistory(session?.conversationHistory);
-	const effectiveTone = (recentTone || inferredTone || "confident") as Tone;
-	const vibe = pickVibe(body.tone || body.goal || body.situation || body.userMessage);
-	const intent = inferIntent(userMessage.toLowerCase());
-
-	const script = scriptsByIntent(intent, effectiveTone, vibe);
-
-	// ensure returned object shape
-	return { message: short(script.message) };
-}
+// generateConversationalCoach replaced by coachRespond in coachEngine.ts
 
 // POST-only advice endpoint (conversational local coach)
 app.post("/api/advice", (req, res) => {
@@ -616,7 +602,7 @@ app.post("/api/advice", (req, res) => {
 		console.warn("session write error", err);
 	}
 
-	const data = generateConversationalCoach(body, session);
+	const data = coachRespond({ userMessage: body.userMessage, mode: (body as any).mode });
 
 	// store assistant reply into session as well
 	try {
