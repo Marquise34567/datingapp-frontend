@@ -6,12 +6,6 @@ type Msg = { id: string; role: "user" | "assistant"; text: string };
 
 // Quick actions removed per request
 
-const EXAMPLES = [
-  "She said: “lol sure” — what does that mean?",
-  "Write a confident reply without sounding desperate.",
-  "Plan a first date: fun, low pressure, not expensive.",
-];
-
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
 }
@@ -113,18 +107,7 @@ export default function PremiumDatingAdvicePage() {
               sweet, or direct. Build a simple plan that actually gets the date set.
             </p>
 
-            <div className="mt-6 flex flex-wrap gap-2">
-              {EXAMPLES.map((e) => (
-                <button
-                  key={e}
-                  type="button"
-                  onClick={() => pushUser(e)}
-                  className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/90 shadow-sm backdrop-blur hover:bg-white/10"
-                >
-                  {e}
-                </button>
-              ))}
-            </div>
+            {/* Example quick-action buttons removed per request */}
           </div>
 
           {/* Premium card removed from hero - available via Upgrade button */}
