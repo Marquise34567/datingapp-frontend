@@ -1,6 +1,6 @@
 import { getHistory } from "./memoryStore.js";
 
-export type Mode = "dating_advice" | "rizz";
+export type Mode = "dating_advice" | "rizz" | "strategy";
 
 function cap(s: string, n = 480) {
   const out = s.trim();
@@ -8,7 +8,9 @@ function cap(s: string, n = 480) {
 }
 
 function pickMode(m?: string): Mode {
-  return m === "rizz" ? "rizz" : "dating_advice";
+  if (m === "rizz") return "rizz";
+  if (m === "strategy") return "strategy";
+  return "dating_advice";
 }
 
 export function coachRespond(body: { sessionId: string; userMessage: string; mode?: string }) {
