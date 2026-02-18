@@ -3,7 +3,8 @@ import express from "express";
 import cors from "cors";
 import { z } from "zod";
 import crypto from "crypto";
-import { coachRespond } from "./coachEngine.js";
+import { coachBrainV2 } from "./coachBrainV2.js";
+import { pushTurn } from "./memoryStore.js";
 
 const app = express();
 
@@ -580,8 +581,14 @@ function inferToneFromHistory(history?: SessionData["conversationHistory"]) {
 // generateConversationalCoach replaced by coachRespond in coachEngine.ts
 
 // POST-only advice endpoint (conversational local coach)
-app.post("/api/advice", (req, res) => {
-	const body = (req.body || {}) as AdviceRequest;
+app.post("/api/advice", async (req, res) => {
+	const body = (req.body || {}) as AdviceRequest & { sessionId?: string; mode?: string };
+
+	const sessionId = body.sessionId || (req as any).sessionId;
+
+	if (!sessionId || typeof sessionId !== "string") {
+		return res.status(400).json({ error: "sessionId required (string)" });
+	}
 
 	if (!body.userMessage || typeof body.userMessage !== "string") {
 		return res.status(400).json({ error: "Missing userMessage (string)" });
@@ -589,7 +596,7 @@ app.post("/api/advice", (req, res) => {
 
 	const session = (req as any).sessionData as SessionData | undefined;
 
-	// store the incoming user message in session conversationHistory (keep last 10)
+	// store the incoming user message in both session (legacy) and memoryStore
 	try {
 		if (session) {
 			session.conversationHistory.push({ role: "user", content: body.userMessage });
@@ -598,13 +605,18 @@ app.post("/api/advice", (req, res) => {
 			}
 		}
 	} catch (err) {
-		// ignore session write errors — best-effort memory
 		console.warn("session write error", err);
 	}
 
-	const data = coachRespond({ userMessage: body.userMessage, mode: (body as any).mode });
+	try {
+		pushTurn(sessionId, { role: "user", text: body.userMessage, ts: Date.now() });
+	} catch (err) {
+		console.warn("memoryStore push user error", err);
+	}
 
-	// store assistant reply into session as well
+	const data = await coachBrainV2({ sessionId, userMessage: body.userMessage, mode: (body as any).mode });
+
+	// store assistant reply into session and memoryStore
 	try {
 		if (session && typeof data?.message === "string") {
 			session.conversationHistory.push({ role: "assistant", content: data.message });
@@ -614,6 +626,14 @@ app.post("/api/advice", (req, res) => {
 		}
 	} catch (err) {
 		console.warn("session write error", err);
+	}
+
+	try {
+		if (typeof data?.message === "string") {
+			pushTurn(sessionId, { role: "coach", text: data.message, ts: Date.now() });
+		}
+	} catch (err) {
+		console.warn("memoryStore push coach error", err);
 	}
 
 	return res.json(data);
