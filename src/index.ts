@@ -2,6 +2,7 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import { z } from "zod";
+import { coachRespond } from "./coachEngine";
 
 const app = express();
 
@@ -377,16 +378,24 @@ function generateLocalAI(body: AdviceRequest) {
 	return { strategy, replies, datePlan };
 }
 
-// POST-only advice endpoint
+// POST-only advice endpoint (wired to local coach engine)
 app.post("/api/advice", (req, res) => {
-	const body = (req.body || {}) as AdviceRequest;
-
-	if (!body.userMessage || typeof body.userMessage !== "string") {
+	const { userMessage, tone, goal, conversation, context } = req.body || {};
+	if (!userMessage || typeof userMessage !== "string") {
 		return res.status(400).json({ error: "Missing userMessage (string)" });
 	}
 
-	const data = generateLocalAI(body);
-	return res.json(data);
+	const out = coachRespond({ userMessage, tone, goal, conversation, context });
+	return res.json({
+		strategy: out.strategy,
+		replies: out.replies,
+		datePlan: {
+			idea: out.plan.steps[0] || "Next step",
+			textToSend: out.replies.confident[0],
+			logistics: out.plan.steps,
+		},
+		safety: out.safety,
+	});
 });
 
 app.get("/api/health", (req, res) => {
