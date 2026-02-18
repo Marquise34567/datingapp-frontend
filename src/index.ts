@@ -2,7 +2,6 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import { z } from "zod";
-import { coachRespond } from "./coachEngine.js";
 
 const app = express();
 
@@ -366,36 +365,63 @@ function buildDatePlan(topic: string) {
 	};
 }
 
-function generateLocalAI(body: AdviceRequest) {
+function generateConversationalCoach(body: AdviceRequest) {
 	const tone = normalizeTone(body.tone);
-	const userMessage = (body.userMessage || "").trim();
-	const topic = detectTopic(`${body.situation || ""}\n${userMessage}`);
+	const userMessage = (body.userMessage || "").trim().toLowerCase();
 
-	const strategy = buildStrategy(topic, tone);
-	const replies = buildReplies(tone, topic, userMessage);
-	const datePlan = buildDatePlan(topic);
+	const short = (text: string) => text.slice(0, 350); // force shorter replies
 
-	return { strategy, replies, datePlan };
+	// If user is confused / asking what to say
+	if (userMessage.includes("what do i say") || userMessage.includes("reply") || userMessage.includes("respond")) {
+		return {
+			message: short(
+				"Okay. Before I give you a reply — what’s the vibe? Are they warm, dry, or unsure?"
+			)
+		};
+	}
+
+	if (userMessage.includes("lol") || userMessage.includes("sure")) {
+		return {
+			message: short(
+				"That’s neutral energy. Don’t overthink it.\n\nTry: “Haha fair. What day works this week?”\n\nKeep it light."
+			)
+		};
+	}
+
+	if (userMessage.includes("she's mad") || userMessage.includes("he's mad") || userMessage.includes("argue")) {
+		return {
+			message: short(
+				"Don’t solve it over text.\n\nSay: “I don’t want to argue. Can we talk later and reset?”\n\nDe-escalate first."
+			)
+		};
+	}
+
+	if (userMessage.includes("cheat") || userMessage.includes("lying")) {
+		return {
+			message: short(
+				"Okay. That’s serious.\n\nAsk directly: “Is there anything you haven’t told me?”\n\nCalm voice. No accusations."
+			)
+		};
+	}
+
+	// Default conversational fallback
+	return {
+		message: short(
+			"Tell me exactly what they said and what you want to happen.\n\nI’ll help you respond the right way."
+		)
+	};
 }
 
-// POST-only advice endpoint (wired to local coach engine)
+// POST-only advice endpoint (conversational local coach)
 app.post("/api/advice", (req, res) => {
-	const { userMessage, tone, goal, conversation, context } = req.body || {};
-	if (!userMessage || typeof userMessage !== "string") {
+	const body = (req.body || {}) as AdviceRequest;
+
+	if (!body.userMessage || typeof body.userMessage !== "string") {
 		return res.status(400).json({ error: "Missing userMessage (string)" });
 	}
 
-	const out = coachRespond({ userMessage, tone, goal, conversation, context });
-	return res.json({
-		strategy: out.strategy,
-		replies: out.replies,
-		datePlan: {
-			idea: out.plan.steps[0] || "Next step",
-			textToSend: out.replies.confident[0],
-			logistics: out.plan.steps,
-		},
-		safety: out.safety,
-	});
+	const data = generateConversationalCoach(body);
+	return res.json(data);
 });
 
 app.get("/api/health", (req, res) => {
