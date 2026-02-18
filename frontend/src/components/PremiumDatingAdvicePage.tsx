@@ -64,7 +64,7 @@ export default function PremiumDatingAdvicePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#05070D] text-white">
+    <div className="min-h-screen app-bg">
       {/* Top Nav */}
       <header className="sticky top-0 z-20 border-b border-white/10 bg-black/30 backdrop-blur-xl">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
