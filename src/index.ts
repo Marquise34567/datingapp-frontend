@@ -1,7 +1,6 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
-import OpenAI from "openai";
 import { z } from "zod";
 
 const app = express();
@@ -181,82 +180,213 @@ async function generateAdvice(data: any) {
 	 ROUTES
 ================================ */
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+type AdviceRequest = {
+	situation?: string;
+	goal?: string;
+	tone?: string;
+	conversation?: Array<{ from: string; text: string }>;
+	userMessage?: string;
+};
 
-app.post("/api/advice", async (req, res) => {
-	try {
-		const { situation, goal, tone, conversation, userMessage } = req.body ?? {};
+function normalizeTone(tone?: string) {
+	const t = (tone || "").toLowerCase();
+	if (t.includes("play")) return "playful";
+	if (t.includes("sweet") || t.includes("warm")) return "sweet";
+	if (t.includes("direct")) return "direct";
+	return "confident";
+}
 
-		if (!userMessage || typeof userMessage !== "string") {
-			return res.status(400).json({ error: "Missing userMessage (string)" });
-		}
+function detectTopic(text: string) {
+	const t = text.toLowerCase();
 
-		// Keep prompt tight & repeatable
-		const input = [
-			{
-				role: "system",
-				content:
-					"You are DateCoach: a premium dating coach. Give practical, respectful, non-manipulative advice. " +
-					"Prioritize clarity, confidence, and consent. Keep texts short (1–2 sentences).",
-			},
-			{
-				role: "user",
-				content: JSON.stringify({
-					situation: situation ?? "General",
-					goal: goal ?? "Get the best next message",
-					tone: tone ?? "confident",
-					conversation: Array.isArray(conversation) ? conversation : [],
-					userMessage,
-				}),
-			},
-		];
+	const has = (words: string[]) => words.some((w) => t.includes(w));
 
-		const messages: Array<{ role: "system" | "user"; content: string }> = [
-			{
-				role: "system",
-				content:
-					"You are DateCoach: a premium dating coach. Give practical, respectful, non-manipulative advice. " +
-					"Prioritize clarity, confidence, and consent. Keep texts short (1–2 sentences). " +
-					"Return ONLY valid JSON matching this schema:\n" +
-					"{ strategy: {headline:string, why:string, do:string[], dont:string[] }, " +
-					"replies: {confident:string[], playful:string[], sweet:string[], direct:string[]}, " +
-					"datePlan: {idea:string, textToSend:string, logistics:string[]} }",
-			},
-			{
-				role: "user",
-				content: JSON.stringify({
-					situation: situation ?? "General",
-					goal: goal ?? "Get the best next message",
-					tone: tone ?? "confident",
-					conversation: Array.isArray(conversation) ? conversation : [],
-					userMessage,
-				}),
-			},
-		];
+	if (has(["break up", "breakup", "dump", "ended", "ex", "no contact"])) return "breakup";
+	if (has(["cheat", "cheated", "lying", "trust", "sneak", "dm", "texting other"])) return "trust";
+	if (has(["fight", "argue", "argument", "mad at", "upset", "silent treatment"])) return "conflict";
+	if (has(["family", "mom", "dad", "parents", "brother", "sister", "in-law", "in laws"])) return "family";
+	if (has(["relationship", "bf", "girlfriend", "boyfriend", "partner", "marriage", "husband", "wife"])) return "relationship";
+	if (has(["date", "first date", "second date", "hang out", "link", "meet up"])) return "dating";
+	if (has(["boundary", "boundaries", "respect", "space", "clingy", "needy"])) return "boundaries";
+	if (has(["what do i say", "reply", "respond", "text", "message", "snap"])) return "texting";
+	return "general";
+}
 
-		const completion = await openai.chat.completions.create({
-			model: "gpt-4o-mini",
-			messages,
-			temperature: 0.7,
-		});
+function buildReplies(tone: string, topic: string, userMessage: string) {
+	// Keep all replies short (1–2 sentences)
+	const confident = [
+		"I’m down. What day works this week?",
+		"Let’s keep it simple—when are you free?",
+		"I like you. Let’s make a plan."
+	];
 
-		const text = completion.choices?.[0]?.message?.content ?? "{}";
-		let data: any;
+	const playful = [
+		"Okay bet 😄 when are we doing this?",
+		"Cool—don’t tease me. What day you free?",
+		"Say less. Pick a day 😌"
+	];
 
-		try {
-			data = JSON.parse(text);
-		} catch {
-			const firstBrace = text.indexOf("{");
-			const lastBrace = text.lastIndexOf("}");
-			const sliced = firstBrace !== -1 && lastBrace !== -1 ? text.slice(firstBrace, lastBrace + 1) : "{}";
-			data = JSON.parse(sliced);
-		}
+	const sweet = [
+		"I’d like that. What day works for you?",
+		"That sounds nice—when are you free this week?",
+		"I’m happy you said that. Let’s make a plan."
+	];
 
-		return res.json(data);
-	} catch (err: any) {
-		console.error(err);
-		return res.status(500).json({ error: err?.message || "OpenAI request failed" });
+	const direct = [
+		"When are you free to talk about this?",
+		"What do you want from me going forward?",
+		"I need clarity—are we doing this or not?"
+	];
+
+	// Topic-specific “best reply” bias
+	if (topic === "family") {
+		confident[0] = "I hear you. What would feel respectful to you and your family right now?";
+		sweet[0] = "That sounds heavy. Do you want comfort, advice, or a plan for what to say?";
+		direct[0] = "What’s the exact outcome you want with your family here?";
 	}
+
+	if (topic === "conflict") {
+		confident[0] = "I want to understand you—not win. Can we talk calmly about what happened?";
+		sweet[0] = "I’m sorry this hurt. I care about us—can we reset and talk it through?";
+		direct[0] = "This pattern isn’t working. Let’s talk today and agree on a better way.";
+	}
+
+	if (topic === "breakup") {
+		confident[0] = "I respect your decision. I’m going to take space and focus on myself.";
+		sweet[0] = "I’m sad, but I respect it. I’m going to step back and heal.";
+		direct[0] = "Understood. I won’t argue—take care.";
+	}
+
+	if (topic === "trust") {
+		confident[0] = "I need honesty to feel safe. Can you tell me the full truth so we can decide what’s next?";
+		sweet[0] = "I want to rebuild trust, but I need openness. Can we talk honestly about what happened?";
+		direct[0] = "If there’s cheating or lying, I’m out. Tell me the truth right now.";
+	}
+
+	// Return in your UI’s shape
+	return { confident, playful, sweet, direct };
+}
+
+function buildStrategy(topic: string, tone: string) {
+	const baseDo = [
+		"Keep messages under 1–2 sentences",
+		"Ask one clear question",
+		"Stay calm and grounded",
+		"Match their energy without chasing"
+	];
+	const baseDont = [
+		"Over-explain",
+		"Double-text immediately",
+		"Argue over text if it’s emotional",
+		"Try to “win” the conversation"
+	];
+
+	const headlineMap: Record<string, string> = {
+		dating: "Move it forward with a clear plan",
+		texting: "Keep it short, confident, and easy to reply to",
+		relationship: "Lead with clarity and respect",
+		family: "Stay respectful and set a calm plan",
+		conflict: "De-escalate, then solve the real issue",
+		breakup: "Protect your dignity and heal",
+		trust: "Ask for truth + set boundaries",
+		boundaries: "Be firm, kind, and specific",
+		general: "Clarity beats confusion"
+	};
+
+	const whyMap: Record<string, string> = {
+		dating: "A specific plan removes uncertainty and makes it easy to say yes.",
+		texting: "Short messages feel confident and reduce anxiety for both people.",
+		relationship: "Respectful clarity prevents mixed signals and resentment.",
+		family: "Family situations improve when you stay calm and focus on outcomes.",
+		conflict: "De-escalation stops damage; then you can fix the real problem.",
+		breakup: "Dignity now saves you pain later and speeds up healing.",
+		trust: "You can’t rebuild without full honesty and clear boundaries.",
+		boundaries: "Specific boundaries prevent repeated issues and protect your peace.",
+		general: "Clear intent creates faster, healthier outcomes."
+	};
+
+	const headline = headlineMap[topic] || headlineMap.general;
+	const why = whyMap[topic] || whyMap.general;
+
+	// Topic tweaks
+	const doExtra: Record<string, string[]> = {
+		conflict: ["Use ‘I feel / I need’ language", "Propose a quick call if text is escalating"],
+		family: ["Name the boundary kindly", "Offer a compromise if appropriate"],
+		trust: ["Ask for specifics once, not endlessly", "Decide consequences ahead of time"],
+		breakup: ["Mute/unfollow if needed", "Talk to friends, sleep, hydrate—stabilize"],
+		boundaries: ["State the boundary + consequence once", "Follow through calmly"]
+	};
+
+	const dontExtra: Record<string, string[]> = {
+		conflict: ["Bring up 10 old problems at once", "Insult or label them"],
+		trust: ["Become a detective forever", "Threaten unless you mean it"],
+		breakup: ["Beg", "Send long paragraphs"],
+		family: ["Yell or disrespect", "Let guilt decide for you"],
+		boundaries: ["Set boundaries you won’t enforce", "Argue about your boundary"]
+	};
+
+	const doList = [...baseDo, ...(doExtra[topic] || [])];
+	const dontList = [...baseDont, ...(dontExtra[topic] || [])];
+
+	// Tone tweaks (light touch)
+	if (tone === "playful") doList.unshift("Add one light, positive line (no sarcasm)");
+	if (tone === "direct") doList.unshift("Be concise and specific");
+	if (tone === "sweet") doList.unshift("Add warmth without over-apologizing");
+
+	return { headline, why, do: doList, dont: dontList };
+}
+
+function buildDatePlan(topic: string) {
+	if (topic === "dating") {
+		return {
+			idea: "Low-pressure first date: coffee + short walk",
+			textToSend: "Let’s do coffee this week—are you free Thursday or Saturday?",
+			logistics: ["Pick 2 time options", "Keep it 60–90 minutes", "Choose an easy location"]
+		};
+	}
+	if (topic === "family") {
+		return {
+			idea: "Calm 10-minute talk focused on the outcome",
+			textToSend: "Can we talk for 10 minutes tonight? I want to handle this respectfully and find a plan.",
+			logistics: ["Choose a calm time", "Write 2–3 key points", "End with a clear next step"]
+		};
+	}
+	if (topic === "conflict") {
+		return {
+			idea: "Reset + solve: short call then agreement",
+			textToSend: "I don’t want to argue over text. Can we do a quick call later and reset?",
+			logistics: ["Start with one apology if needed", "Name the issue in one sentence", "Agree on one change each"]
+		};
+	}
+	return {
+		idea: "Simple next step",
+		textToSend: "What would feel best to you as the next step—talking now or making a plan for later?",
+		logistics: ["Ask one question", "Keep it respectful", "Move to a call if it’s emotional"]
+	};
+}
+
+function generateLocalAI(body: AdviceRequest) {
+	const tone = normalizeTone(body.tone);
+	const userMessage = (body.userMessage || "").trim();
+	const topic = detectTopic(`${body.situation || ""}\n${userMessage}`);
+
+	const strategy = buildStrategy(topic, tone);
+	const replies = buildReplies(tone, topic, userMessage);
+	const datePlan = buildDatePlan(topic);
+
+	return { strategy, replies, datePlan };
+}
+
+// POST-only advice endpoint
+app.post("/api/advice", (req, res) => {
+	const body = (req.body || {}) as AdviceRequest;
+
+	if (!body.userMessage || typeof body.userMessage !== "string") {
+		return res.status(400).json({ error: "Missing userMessage (string)" });
+	}
+
+	const data = generateLocalAI(body);
+	return res.json(data);
 });
 
 app.get("/api/health", (req, res) => {
