@@ -1,28 +1,35 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
+import type { CorsOptions } from "cors";
 import { z } from "zod";
 
 const app = express();
 
 const allowedOrigins = [
-	"http://localhost:5173",
-	"http://localhost:5174",
-	"http://localhost:5175",
-	"https://YOUR-FRONTEND-DOMAIN.com",
+	"http://localhost:3000",
+	"http://localhost:3001",
+	"https://autoeditor.app",
+	"https://www.autoeditor.app",
 ];
 
-app.use(
-	cors({
-		origin: (origin, callback) => {
-			// allow requests with no origin (e.g., mobile apps, curl)
-			if (!origin) return callback(null, true);
-			if (allowedOrigins.includes(origin)) return callback(null, true);
-			return callback(new Error("CORS policy: Origin not allowed"));
-		},
-		credentials: true,
-	})
-);
+const ALLOWED_ORIGINS = new Set(allowedOrigins);
+
+const corsOptions: CorsOptions = {
+	credentials: true,
+	origin: (
+		origin: string | undefined,
+		callback: (err: Error | null, allow?: boolean) => void
+	) => {
+		// allow server-to-server / curl requests (no Origin header)
+		if (!origin) return callback(null, true);
+
+		const allowed = ALLOWED_ORIGINS.has(origin);
+		return callback(null, allowed);
+	},
+};
+
+app.use(cors(corsOptions));
 app.use(express.json({ limit: "1mb" }));
 
 /* ===============================
