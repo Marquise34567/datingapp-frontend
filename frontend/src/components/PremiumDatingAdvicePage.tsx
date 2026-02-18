@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useRef, useState } from "react";
+import { fetchAdvice } from "../lib/advice";
 
 type Msg = { id: string; role: "user" | "assistant"; text: string };
 
@@ -27,34 +28,70 @@ export default function PremiumDatingAdvicePage() {
     },
   ]);
   const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
   const listRef = useRef<HTMLDivElement | null>(null);
   const [showInsights, setShowInsights] = useState(false);
 
   const canSend = useMemo(() => input.trim().length > 0, [input]);
-
   function scrollToBottom() {
     requestAnimationFrame(() => {
       listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" });
     });
   }
 
-  function pushUser(text: string) {
+  function formatAdviceToText(result: any) {
+    // Prefer server-provided single-message response
+    if (typeof result?.message === "string" && result.message.trim().length > 0) {
+      return result.message;
+    }
+
+    // Fallback: stringify minimal parts if message absent
+    const headline = result?.strategy?.headline ? `${result.strategy.headline}\n` : "";
+    const why = result?.strategy?.why ? `${result.strategy.why}\n` : "";
+    const pick = result?.replies?.confident?.[0] || result?.replies?.playful?.[0] || result?.replies?.sweet?.[0] || "";
+    return `${headline}${why}${pick}`.trim();
+  }
+
+  async function pushUser(text: string) {
     const trimmed = text.trim();
-    if (!trimmed) return;
-    // user sent a new message -> hide insights until finished again
-    setShowInsights(false);
-    setMessages((prev) => [
-      ...prev,
-      { id: crypto.randomUUID(), role: "user", text: trimmed },
-      {
-        id: crypto.randomUUID(),
-        role: "assistant",
-        text:
-          "Got it — when the backend is connected, I’ll return tailored advice here (tone, intent, and 3 reply options).",
-      },
-    ]);
+    if (!trimmed || loading) return;
+
+    setMessages((prev) => [...prev, { id: crypto.randomUUID(), role: "user", text: trimmed }]);
     setInput("");
-    scrollToBottom();
+    setLoading(true);
+
+    try {
+      const conversation = messages
+        .filter((m) => m.role === "user" || m.role === "assistant")
+        .slice(-12)
+        .map((m) => ({ from: m.role === "user" ? "me" : "them", text: m.text }));
+
+      const result = await fetchAdvice({
+        situation: "General dating conversation",
+        goal: "Get the best next message + plan",
+        tone: "confident and smooth",
+        conversation,
+        userMessage: trimmed,
+      });
+
+      const assistantText = formatAdviceToText(result);
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          text: assistantText || "I generated advice, but it returned empty.",
+        },
+      ]);
+    } catch (e: any) {
+      setMessages((prev) => [
+        ...prev,
+        { id: crypto.randomUUID(), role: "assistant", text: `Error: ${e.message}` },
+      ]);
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -97,7 +134,7 @@ export default function PremiumDatingAdvicePage() {
               Personalized texts • date plans • profile help
             </div>
 
-            <h1 className="mt-4 text-3xl font-semibold tracking-tight sm:text-5xl">
+            <h1 className="mt-4 text-3xl font-semibold tracking-tight sm:text-5xl heading">
               Text smarter. Date smoother.{' '}
               <span className="text-zinc-500">No cringe.</span>
             </h1>
@@ -116,7 +153,7 @@ export default function PremiumDatingAdvicePage() {
         {/* Main layout */}
         <section className="mt-10 grid gap-6 lg:grid-cols-[1fr_380px]">
           {/* Chat panel */}
-          <div className="rounded-3xl border border-zinc-200 bg-white shadow-[0_16px_40px_-28px_rgba(0,0,0,0.35)] overflow-hidden">
+          <div className="rounded-3xl border border-zinc-200 bg-white shadow-deep overflow-hidden">
             {/* Chat header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-100">
               <div className="flex items-center gap-3">
@@ -132,7 +169,7 @@ export default function PremiumDatingAdvicePage() {
             {/* Messages */}
             <div
               ref={listRef}
-              className="h-[56vh] overflow-y-auto px-4 py-4 bg-[radial-gradient(circle_at_top,rgba(0,0,0,0.05),transparent_50%)]"
+              className="h-[56vh] overflow-y-auto px-4 py-4"
             >
               <div className="space-y-3">
                 {messages.map((m) => (
@@ -160,13 +197,13 @@ export default function PremiumDatingAdvicePage() {
             {/* Composer */}
             <div className="border-t border-zinc-100 bg-white px-4 py-4">
               <div className="flex items-end gap-2">
-                <div className="flex-1 rounded-2xl border border-zinc-200 bg-white px-3 py-2 shadow-sm focus-within:ring-2 focus-within:ring-zinc-900/10">
+                <div className="flex-1 composer-input">
                   <textarea
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     placeholder="Type your situation… (paste the convo, what they said, and what you want)"
                     rows={1}
-                    className="max-h-28 w-full resize-none bg-transparent text-[15px] outline-none placeholder:text-zinc-400"
+                    className="max-h-28 w-full resize-none placeholder:text-zinc-400"
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && !e.shiftKey) {
                         e.preventDefault();
@@ -174,26 +211,24 @@ export default function PremiumDatingAdvicePage() {
                       }
                     }}
                   />
-                  <div className="mt-2 flex items-center justify-between">
-                    <div className="text-[11px] text-zinc-400">Enter to send • Shift+Enter new line</div>
-                    <div className="text-[11px] text-zinc-400">
-                      Privacy-first (UI placeholder)
-                    </div>
+                  <div className="composer-meta">
+                    <div>Enter to send • Shift+Enter new line</div>
+                    <div>Privacy-first (UI placeholder)</div>
                   </div>
                 </div>
 
                 <button
                   type="button"
                   onClick={() => pushUser(input)}
-                  disabled={!canSend}
+                  disabled={!input.trim() || loading}
                   className={cx(
                     "h-11 rounded-2xl px-4 text-sm font-semibold shadow-sm",
-                    canSend
-                      ? "bg-zinc-950 text-white hover:bg-zinc-800"
-                      : "bg-zinc-100 text-zinc-400 cursor-not-allowed"
+                    !input.trim() || loading
+                      ? "bg-zinc-100 text-zinc-400 cursor-not-allowed"
+                      : "accent-gradient text-zinc-900 hover:opacity-95"
                   )}
                 >
-                  Send
+                  {loading ? "Thinking…" : "Send"}
                 </button>
               </div>
             </div>
@@ -202,7 +237,7 @@ export default function PremiumDatingAdvicePage() {
           {/* Side panel: show only after conversation is finished */}
           {showInsights ? (
             <aside className="space-y-6">
-              <div className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-[0_16px_40px_-28px_rgba(0,0,0,0.35)]">
+              <div className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-deep">
                 <div className="text-sm font-semibold">Conversation Insights</div>
                 <div className="mt-4 flex items-center justify-between">
                   <div className="text-4xl font-semibold">7.4</div>
@@ -230,7 +265,7 @@ export default function PremiumDatingAdvicePage() {
                 </div>
               </div>
 
-              <div className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-[0_16px_40px_-28px_rgba(0,0,0,0.35)]">
+              <div className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-deep">
                 <div className="text-sm font-semibold">Suggested Replies</div>
                 <div className="mt-4 grid gap-2">
                   {['😄', '😉', '❤️', '🔥'].map((emoji) => (
@@ -248,7 +283,7 @@ export default function PremiumDatingAdvicePage() {
             </aside>
           ) : (
             <aside className="space-y-6">
-              <div className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-[0_16px_40px_-28px_rgba(0,0,0,0.35)]">
+              <div className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-deep">
                 <div className="text-sm font-semibold">Conversation in progress</div>
                 <p className="mt-3 text-sm text-zinc-600">Finish the conversation to see insights and suggested replies.</p>
                 <div className="mt-4">
