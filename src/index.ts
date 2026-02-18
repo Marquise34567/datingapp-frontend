@@ -1,6 +1,7 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
+import OpenAI from "openai";
 import { z } from "zod";
 
 const app = express();
@@ -180,25 +181,95 @@ async function generateAdvice(data: any) {
 	 ROUTES
 ================================ */
 
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
 app.post("/api/advice", async (req, res) => {
-	const parsed = AdviceRequestSchema.safeParse(req.body);
-
-	if (!parsed.success) {
-		return res.status(400).json({ error: parsed.error.flatten() });
-	}
-
-	const safety = safetyCheck(parsed.data);
-
-	if (safety.blocked) {
-		return res.status(400).json({ error: safety.message });
-	}
-
 	try {
-		const result = await generateAdvice(parsed.data);
-		return res.json(result);
-	} catch (err) {
+		const { situation, goal, tone, conversation, userMessage } = req.body ?? {};
+
+		if (!userMessage || typeof userMessage !== "string") {
+			return res.status(400).json({ error: "Missing userMessage (string)" });
+		}
+
+		// Keep prompt tight & repeatable
+		const input = [
+			{
+				role: "system",
+				content:
+					"You are DateCoach: a premium dating coach. Give practical, respectful, non-manipulative advice. " +
+					"Prioritize clarity, confidence, and consent. Keep texts short (1–2 sentences).",
+			},
+			{
+				role: "user",
+				content: JSON.stringify({
+					situation: situation ?? "General",
+					goal: goal ?? "Get the best next message",
+					tone: tone ?? "confident",
+					conversation: Array.isArray(conversation) ? conversation : [],
+					userMessage,
+				}),
+			},
+		];
+
+		const response = await openai.responses.create({
+			model: "gpt-4o-mini",
+			input,
+			// Structured Outputs (JSON schema)
+			text: {
+				format: {
+					type: "json_schema",
+					name: "dating_advice",
+					schema: {
+						type: "object",
+						additionalProperties: false,
+						properties: {
+							strategy: {
+								type: "object",
+								additionalProperties: false,
+								properties: {
+									headline: { type: "string" },
+									why: { type: "string" },
+									do: { type: "array", items: { type: "string" } },
+									dont: { type: "array", items: { type: "string" } },
+								},
+								required: ["headline", "why", "do", "dont"],
+							},
+							replies: {
+								type: "object",
+								additionalProperties: false,
+								properties: {
+									confident: { type: "array", items: { type: "string" } },
+									playful: { type: "array", items: { type: "string" } },
+									sweet: { type: "array", items: { type: "string" } },
+									direct: { type: "array", items: { type: "string" } },
+								},
+								required: ["confident", "playful", "sweet", "direct"],
+							},
+							datePlan: {
+								type: "object",
+								additionalProperties: false,
+								properties: {
+									idea: { type: "string" },
+									textToSend: { type: "string" },
+									logistics: { type: "array", items: { type: "string" } },
+								},
+								required: ["idea", "textToSend", "logistics"],
+							},
+						},
+						required: ["strategy", "replies", "datePlan"],
+					},
+				},
+			},
+		});
+
+		// The SDK returns structured JSON in the text output
+		const jsonText = response.output_text; // string of JSON
+		const data = JSON.parse(jsonText);
+
+		return res.json(data);
+	} catch (err: any) {
 		console.error(err);
-		return res.status(500).json({ error: "Advice generation failed" });
+		return res.status(500).json({ error: err?.message || "OpenAI request failed" });
 	}
 });
 
