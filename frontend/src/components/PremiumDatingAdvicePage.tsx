@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useRef, useState } from "react";
+import React, { useMemo, useRef, useState, useEffect } from "react";
 import { fetchAdvice } from "../lib/advice";
 
 type Msg = { id: string; role: "user" | "assistant"; text: string };
@@ -33,6 +33,19 @@ export default function PremiumDatingAdvicePage() {
   const [showInsights, setShowInsights] = useState(false);
 
   const canSend = useMemo(() => input.trim().length > 0, [input]);
+  const placeholders = [
+    "She said 'lol sure' — what does that mean?",
+    'He hasn\'t replied in 2 days.',
+    'How do I ask her out without sounding try-hard?',
+    'Are we exclusive or not?',
+  ];
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
+  useEffect(() => {
+    if (input.trim().length > 0) return;
+    const id = setInterval(() => setPlaceholderIndex((i) => (i + 1) % placeholders.length), 3200);
+    return () => clearInterval(id);
+  }, [input]);
+  const placeholderText = input.trim().length > 0 ? '' : placeholders[placeholderIndex];
   function scrollToBottom() {
     requestAnimationFrame(() => {
       listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" });
@@ -100,24 +113,34 @@ export default function PremiumDatingAdvicePage() {
       <header className="sticky top-0 z-20 border-b border-white/10 bg-black/30 backdrop-blur-xl">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-2xl bg-zinc-950 text-white grid place-items-center font-semibold">
-              💬
+            <div className="h-9 w-9 rounded-2xl bg-zinc-950 text-white grid place-items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M12 2v3" />
+                <path d="M12 19v3" />
+                <path d="M4.2 4.2L6 6" />
+                <path d="M18 18l1.8 1.8" />
+                <path d="M2 12h3" />
+                <path d="M19 12h3" />
+                <path d="M4.2 19.8L6 18" />
+                <path d="M18 6l1.8-1.8" />
+                <path d="M12 7a5 5 0 100 10 5 5 0 000-10z" />
+              </svg>
             </div>
             <div className="leading-tight">
-              <div className="text-sm font-semibold">DateCoach</div>
+              <div className="text-sm font-semibold">Sparkd</div>
               <div className="text-xs text-zinc-500">Premium dating advice</div>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
             <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
               Good
             </span>
             <span className="text-sm text-zinc-500">7.4/10</span>
-            <button className="ml-2 rounded-full bg-white text-zinc-900 px-4 py-2 text-sm font-semibold shadow hover:bg-white/90" onClick={() => setShowModal(true)}>
+            <button className="ml-2 btn btn-primary" onClick={() => setShowModal(true)}>
               Upgrade
             </button>
-            <button className="ml-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-white/90 hover:bg-white/10">
+            <button className="ml-2 btn btn-ghost">
               Sign in
             </button>
           </div>
@@ -126,28 +149,71 @@ export default function PremiumDatingAdvicePage() {
 
       {/* Content */}
       <main className="mx-auto max-w-6xl px-4 py-8">
-        {/* Hero */}
-        <section className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-semibold text-zinc-700 shadow-sm">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-              Personalized texts • date plans • profile help
+        {/* Hero: ultra-premium situation panel */}
+        <section className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-start">
+          <div className="situation-panel lift-up">
+            <div className="situation-row">
+              <div>
+                <h2 className="situation-heading heading">What’s the situation?</h2>
+                <p className="situation-subtext">Drop the convo. Tell me the energy.
+                <br />I’ll tell you exactly what to say next.</p>
+                <div className="situation-micro">Short. Smooth. No overthinking.</div>
+              </div>
             </div>
 
-            <h1 className="mt-4 text-3xl font-semibold tracking-tight sm:text-5xl heading">
-              Text smarter. Date smoother.{' '}
-              <span className="text-zinc-500">No cringe.</span>
-            </h1>
+            <div className="situation-rule" />
 
-            <p className="mt-4 max-w-xl text-base text-zinc-600">
-              Paste a conversation and get replies that match your vibe — playful, confident,
-              sweet, or direct. Build a simple plan that actually gets the date set.
-            </p>
+            <div style={{ marginTop: '1rem' }}>
+              <div className="composer-input">
+                <textarea
+                  aria-label="Situation input"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder={placeholderText}
+                  className={"situation-textarea"}
+                  rows={3}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      if (canSend) pushUser(input);
+                    }
+                  }}
+                />
+              </div>
 
-            {/* Example quick-action buttons removed per request */}
+              <div className="mt-3 flex items-center justify-between">
+                <div className="text-xs text-zinc-500">Examples:</div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => pushUser(input)}
+                    disabled={!input.trim() || loading}
+                    className={cx(
+                      "btn h-10 px-4 text-sm",
+                      !input.trim() || loading
+                        ? "bg-zinc-100 text-zinc-400 cursor-not-allowed"
+                        : "btn-primary"
+                    )}
+                  >
+                    {loading ? 'Thinking…' : 'Suggest reply'}
+                  </button>
+                </div>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {placeholders.map((p, i) => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setInput(p)}
+                    className={cx('text-xs px-3 py-2 rounded-xl border', i === placeholderIndex ? 'border-zinc-200 bg-white' : 'border-transparent bg-zinc-50 text-zinc-600')}
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
-          {/* Premium card removed from hero - available via Upgrade button */}
         </section>
 
         {/* Main layout */}
@@ -157,9 +223,21 @@ export default function PremiumDatingAdvicePage() {
             {/* Chat header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-100">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-2xl bg-linear-to-br from-zinc-950 to-zinc-700" />
+                <div className="h-10 w-10 rounded-2xl bg-linear-to-br from-zinc-950 to-zinc-700 text-white grid place-items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M12 2v3" />
+                    <path d="M12 19v3" />
+                    <path d="M4.2 4.2L6 6" />
+                    <path d="M18 18l1.8 1.8" />
+                    <path d="M2 12h3" />
+                    <path d="M19 12h3" />
+                    <path d="M4.2 19.8L6 18" />
+                    <path d="M18 6l1.8-1.8" />
+                    <path d="M12 7a5 5 0 100 10 5 5 0 000-10z" />
+                  </svg>
+                </div>
                 <div>
-                  <div className="text-sm font-semibold">Coach</div>
+                  <div className="text-sm font-semibold">Spark</div>
                   <div className="text-xs text-zinc-500">iMessage-style advice</div>
                 </div>
               </div>
@@ -222,7 +300,7 @@ export default function PremiumDatingAdvicePage() {
                   onClick={() => pushUser(input)}
                   disabled={!input.trim() || loading}
                   className={cx(
-                    "h-11 rounded-2xl px-4 text-sm font-semibold shadow-sm",
+                    "btn h-11 rounded-2xl text-sm shadow-sm",
                     !input.trim() || loading
                       ? "bg-zinc-100 text-zinc-400 cursor-not-allowed"
                       : "accent-gradient text-zinc-900 hover:opacity-95"
@@ -341,7 +419,7 @@ export default function PremiumDatingAdvicePage() {
         )}
 
         <footer className="mt-10 text-center text-xs text-zinc-400">
-          © {new Date().getFullYear()} DateCoach • Premium UI (backend coming next)
+          © {new Date().getFullYear()} Sparkd • Premium UI (backend coming next)
         </footer>
       </main>
     </div>

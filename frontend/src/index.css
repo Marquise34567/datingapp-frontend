@@ -1,35 +1,36 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap');
 @import "tailwindcss";
 
-/* Premium theme variables and base styles */
+/* Premium theme variables and base styles (light mode) */
 :root{
-	color-scheme: dark;
-	--bg-1: #071122; /* deep navy */
-	--bg-2: #0b1320;
-	--surface: #ffffff; /* card surface (light) */
-	--muted: #97a0ad; /* muted text */
-	--accent: #D4AF37; /* gold accent */
-	--accent-2: #6EE7B7; /* subtle mint */
-	--primary-text: #0f1724; /* dark text for cards */
-	--glass: rgba(255,255,255,0.06);
-	--card-shadow: 0 30px 80px rgba(2,6,23,0.35);
+	color-scheme: light;
+	--bg-1: #f7fafc; /* soft off-white */
+	--bg-2: #ffffff;
+	--surface: rgba(255,255,255,0.9); /* translucent card surface */
+	--muted: #6b7280; /* muted text */
+	--accent: #D4AF37; /* warm gold accent */
+	--accent-2: #FF7AA2; /* soft rose accent */
+	--primary-text: #0b1220; /* dark text for cards */
+	--glass: rgba(11,18,32,0.04);
+	--card-shadow: 0 18px 50px rgba(11,18,32,0.09);
 }
 
 html, body { height: 100%; }
-body { margin: 0; font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; background: linear-gradient(180deg, var(--bg-1) 0%, var(--bg-2) 60%); }
+body { margin: 0; font-family: Poppins, Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; background: radial-gradient(1200px 600px at 10% 10%, rgba(212,175,55,0.04), transparent 8%), radial-gradient(900px 400px at 90% 90%, rgba(255,122,162,0.03), transparent 6%), var(--bg-1); color: var(--primary-text); }
 
 /* Make default form controls look premium */
 button, input, textarea { font: inherit; }
 
 /* Root theme helper - use this on the page root to apply primary palette */
-.app-bg{ background: linear-gradient(180deg, rgba(7,17,34,0.9), rgba(4,10,20,0.9)); color: #f8fafc }
+.app-bg{ background: var(--bg-1); color: var(--primary-text) }
 
 /* Re-map some common text helpers */
 .text-primary{ color: var(--primary-text) }
 .text-muted{ color: var(--muted) }
 
 /* Buttons & accents */
-.accent-gradient{ background: linear-gradient(135deg, #FFD86B, #D4AF37); color: #081122 }
+.accent-gradient{ background: linear-gradient(135deg, #FFD86B, var(--accent)); color: #081122; box-shadow: 0 8px 30px rgba(212,175,55,0.12); transition:transform .16s ease, box-shadow .16s ease }
+.accent-gradient:hover{ transform: translateY(-2px); box-shadow: 0 18px 50px rgba(212,175,55,0.14) }
 
 /* Keep the compatibility mapping below so component classes still work. */
 
@@ -62,25 +63,31 @@ button, input, textarea { font: inherit; }
 .shadow-xl{box-shadow:var(--card-shadow)}
 
 /* Header / top nav */
-header.sticky{position:sticky;top:0;z-index:20;background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);backdrop-filter:blur(6px);border-bottom:1px solid rgba(255,255,255,0.03)}
+header.sticky{position:sticky;top:0;z-index:20;background:rgba(255,255,255,0.8);backdrop-filter:blur(6px);border-bottom:1px solid rgba(15,23,42,0.04)}
 header .h-9{width:36px;height:36px;border-radius:12px;display:grid;place-items:center;background:linear-gradient(135deg,var(--accent),#FFD86B);color:var(--primary-text);font-weight:700}
 
 /* Card & chat container */
-.rounded-3xl.border{background:linear-gradient(180deg,#ffffff,#fbfbfb);border-radius:18px;border:1px solid rgba(15,23,42,0.04);box-shadow:var(--card-shadow);overflow:hidden}
+.rounded-3xl.border{background:var(--surface);border-radius:18px;border:1px solid rgba(15,23,42,0.06);box-shadow:var(--card-shadow);overflow:hidden}
 .rounded-3xl.border .px-5{padding-left:1.25rem;padding-right:1.25rem}
-.rounded-3xl.border .overflow-y-auto{height:56vh;overflow-y:auto;padding:16px;background:radial-gradient(circle at top,rgba(0,0,0,0.04),transparent 50%)}
+.rounded-3xl.border .overflow-y-auto{height:56vh;overflow-y:auto;padding:16px;background:transparent}
 
 /* Messages/ bubbles */
 .rounded-3xl.border .space-y-3 > div{display:flex}
-.rounded-3xl.border .space-y-3 > div > div{max-width:85%;border-radius:18px;padding:12px 14px;font-size:15px;line-height:1.35;box-shadow:0 12px 30px rgba(2,6,23,0.08)}
-.rounded-3xl.border .space-y-3 > div.justify-end > div{background:linear-gradient(180deg,#2b6cff,#0f4fd6);color:white;border-bottom-right-radius:6px}
-.rounded-3xl.border .space-y-3 > div.justify-start > div{background:linear-gradient(180deg,#ffffff,#fbfbfb);color:var(--primary-text);border-bottom-left-radius:6px}
+.rounded-3xl.border .space-y-3 > div > div{max-width:85%;border-radius:16px;padding:12px 14px;font-size:15px;line-height:1.35;box-shadow:0 8px 30px rgba(15,23,42,0.06)}
+.rounded-3xl.border .space-y-3 > div.justify-end > div{background:linear-gradient(180deg,#0f62fe,#0753d1);color:white;border-bottom-right-radius:8px}
+.rounded-3xl.border .space-y-3 > div.justify-start > div{background:var(--bg-2);color:var(--primary-text);border-bottom-left-radius:8px}
 
 /* Composer */
-.border-t.bg-white{background:linear-gradient(180deg,#ffffff,#fbfbfb);}
+.border-t.bg-white{background:transparent}
 .border-t .flex{align-items:flex-end}
 .border-t textarea{width:100%;max-height:7rem;resize:none;border:0;outline:none;background:transparent;font-size:15px}
 .border-t button{border-radius:12px;padding:10px 14px}
+
+/* Premium textbox styling */
+.composer-input{background:var(--surface);border:1px solid rgba(15,23,42,0.06);border-radius:14px;padding:12px;box-shadow:0 6px 20px rgba(15,23,42,0.04);transition:box-shadow .16s ease, border-color .12s ease}
+.composer-input:focus-within{box-shadow:0 12px 30px rgba(15,23,42,0.06);border-color:rgba(212,175,55,0.6)}
+.composer-input textarea{background:transparent;border:0;outline:none;padding:0;margin:0;font-size:15px}
+.composer-meta{margin-top:8px;display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--muted)}
 
 /* Side panel */
 aside.space-y-6{display:flex;flex-direction:column;gap:16px}
@@ -93,14 +100,32 @@ aside .rounded-3xl{padding:18px}
 .fixed.inset-0 .relative.z-10 .rounded-3xl{background:var(--surface);color:var(--bg-1)}
 
 /* Buttons used in the component */
-.bg-zinc-950{background:linear-gradient(180deg,#0b1320,#071122);color:#f8fafc}
-.bg-white{background:linear-gradient(180deg,#ffffff,#fbfbfb);color:var(--primary-text)}
+.bg-zinc-950{background:linear-gradient(180deg,#0f1724,#0b1422);color:#f8fafc}
+.bg-white{background:linear-gradient(180deg,#ffffff,#fbfdff);color:var(--primary-text)}
 .text-zinc-500{color:var(--muted)}
 .text-zinc-600{color:#6b7280}
 .text-zinc-400{color:#9aa6b3}
 .text-zinc-900{color:var(--primary-text)}
 .rounded-full{border-radius:9999px}
-.shadow-[0_16px_40px_-28px_rgba\(0,0,0,0.35\)]{box-shadow:0 16px 40px -28px rgba(0,0,0,0.35)}
+.shadow-deep{box-shadow:0 16px 40px -28px rgba(0,0,0,0.12)}
+
+/* Heading utility to use the decorative font */
+.heading{font-family:'Playfair Display', serif; font-weight:700; letter-spacing:-0.01em}
+
+/* Decorative gradient text for key words */
+.gradient-text{background:linear-gradient(90deg,var(--accent),#FF7AA2);-webkit-background-clip:text;background-clip:text;color:transparent}
+
+/* Button system */
+.btn{font-weight:600;border-radius:12px;padding:10px 14px;display:inline-flex;align-items:center;gap:.5rem}
+.btn-primary{background:linear-gradient(135deg,var(--accent),#FFD86B);color:var(--primary-text);box-shadow:0 12px 30px rgba(11,18,32,0.08)}
+.btn-ghost{background:transparent;border:1px solid rgba(11,18,32,0.06);color:var(--primary-text)}
+
+/* Card glass effect */
+.glass-card{background:var(--surface);backdrop-filter:blur(6px);border:1px solid rgba(11,18,32,0.04);box-shadow:var(--card-shadow)}
+
+/* Slight entrance animation for key blocks */
+.lift-up{transform:translateY(0);transition:transform .22s cubic-bezier(.2,.9,.2,1)}
+.lift-up:hover{transform:translateY(-6px)}
 
 /* small helpers */
 .inline-flex{display:inline-flex;align-items:center}
@@ -108,5 +133,28 @@ aside .rounded-3xl{padding:18px}
 .place-items-center{place-items:center}
 
 /* Improve overall readability for the page markup using existing class names */
-main.mx-auto{margin-left:auto;margin-right:auto;max-width:72rem;padding:2rem 1rem}
+main.mx-auto{margin-left:auto;margin-right:auto;max-width:72rem;padding:2.5rem 1rem}
+
+/* Hero heading size adjustment */
+.heading.h1{font-size:clamp(2.2rem,4vw,3.5rem);line-height:1.02}
+
+/* Ultra-premium situation panel */
+.situation-panel{border-radius:1rem; padding:2rem; background:linear-gradient(180deg, var(--bg-2), #fbfdff); border:1px solid rgba(15,23,42,0.04); box-shadow:0 8px 24px rgba(11,18,32,0.04);}
+.situation-heading{font-family:'Inter Tight', Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; font-weight:700; font-size:clamp(1.4rem,3.5vw,2rem); letter-spacing:-0.02em; margin:0 0 .5rem 0}
+.situation-subtext{font-family:Poppins, Inter, system-ui; font-weight:500; font-size:1.05rem; line-height:1.6; color:var(--muted); margin:0 0 1rem 0}
+.situation-micro{font-size:.85rem; color:var(--muted); margin-top:.5rem}
+
+/* textarea */
+.situation-textarea{width:100%; min-height:96px; max-height:220px; padding:14px; border-radius:14px; border:1px solid rgba(11,18,32,0.06); background:transparent; font-size:1rem; line-height:1.6; transition:box-shadow .18s ease, border-color .12s ease; resize:vertical}
+.situation-textarea::placeholder{color:rgba(11,18,32,0.28); font-style:normal}
+.situation-textarea:focus{outline:none; border-color:rgba(212,175,55,0.22); box-shadow:0 6px 30px rgba(212,175,55,0.08);}
+
+/* subtle label spacing */
+.situation-row{display:flex;gap:1rem;align-items:center}
+
+/* small decorative rule */
+.situation-rule{height:1px;background:linear-gradient(90deg, rgba(11,18,32,0.04), rgba(11,18,32,0)); margin-top:1.25rem}
+
+/* Make the composer feel airy */
+.composer-input{padding:0}
 
