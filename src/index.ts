@@ -5,7 +5,24 @@ import { z } from "zod";
 
 const app = express();
 
-app.use(cors({ origin: true, credentials: true }));
+const allowedOrigins = [
+	"http://localhost:5173",
+	"http://localhost:5174",
+	"http://localhost:5175",
+	"https://YOUR-FRONTEND-DOMAIN.com",
+];
+
+app.use(
+	cors({
+		origin: (origin, callback) => {
+			// allow requests with no origin (e.g., mobile apps, curl)
+			if (!origin) return callback(null, true);
+			if (allowedOrigins.includes(origin)) return callback(null, true);
+			return callback(new Error("CORS policy: Origin not allowed"));
+		},
+		credentials: true,
+	})
+);
 app.use(express.json({ limit: "1mb" }));
 
 /* ===============================
