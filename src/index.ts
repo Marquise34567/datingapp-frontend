@@ -2,7 +2,7 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import { z } from "zod";
-import { coachRespond } from "./coachEngine";
+import { coachRespond } from "./coachEngine.js";
 
 const app = express();
 
