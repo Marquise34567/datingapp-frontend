@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { addAdvice, getAllAdvice } from '../store/adviceStore.js';
+import { addAdvice, getAllAdvice } from '../store/adviceStore';
 
 const router = Router();
 
