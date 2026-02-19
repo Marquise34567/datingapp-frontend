@@ -652,11 +652,36 @@ app.get("/api/advice", (_req, res) => {
 });
 
 /* ===============================
-	 START SERVER
+	START SERVER
 ================================ */
 
-const PORT = process.env.PORT || 3001;
+// Railway (and other hosts) provide the port via env.PORT. Bind to 0.0.0.0
+// so the process is reachable from the network. Default to 8080 locally.
+const PORT = Number(process.env.PORT) || 8080;
+const HOST = process.env.HOST || "0.0.0.0";
 
-app.listen(PORT, () => {
-	console.log(`Dating Advice API running on port ${PORT}`);
+const server = app.listen(PORT, HOST, () => {
+	console.log(`Dating Advice API listening on http://${HOST}:${PORT}`);
 });
+
+// Graceful shutdown: allow Railway to SIGTERM the process and close server cleanly.
+function shutdown(signal: string) {
+	console.log(`Received ${signal}. Closing server...`);
+	try {
+		server.close(() => {
+			console.log('Server closed. Exiting.');
+			// do not call process.exit() here; let the platform handle shutdown.
+		});
+		// Force exit if shutdown hangs
+		setTimeout(() => {
+			console.error('Shutdown timeout, forcing exit.');
+			process.exit(1);
+		}, 10000).unref();
+	} catch (err) {
+		console.error('Error during shutdown', err);
+		process.exit(1);
+	}
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
