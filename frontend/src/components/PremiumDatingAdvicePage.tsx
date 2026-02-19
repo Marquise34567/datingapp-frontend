@@ -29,6 +29,7 @@ export default function PremiumDatingAdvicePage() {
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const listRef = useRef<HTMLDivElement | null>(null);
+  const bottomRef = useRef<HTMLDivElement | null>(null);
   const [showInsights, setShowInsights] = useState(false);
   const [mode, setMode] = useState<"dating_advice" | "rizz" | "strategy">("dating_advice");
   const [sessionId] = useState(() => (crypto as any).randomUUID());
@@ -49,9 +50,14 @@ export default function PremiumDatingAdvicePage() {
   const placeholderText = input.trim().length > 0 ? '' : placeholders[placeholderIndex];
   function scrollToBottom() {
     requestAnimationFrame(() => {
-      listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" });
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
     });
   }
+
+  useEffect(() => {
+    // auto-scroll on new messages
+    scrollToBottom();
+  }, [messages]);
 
   function formatAdviceToText(result: any) {
     // Prefer server-provided single-message response
@@ -264,7 +270,7 @@ export default function PremiumDatingAdvicePage() {
             {/* Messages */}
             <div
               ref={listRef}
-              className="h-[56vh] overflow-y-auto px-4 py-4"
+              className="h-[56vh] chat-scroll px-4 py-4"
             >
               <div className="space-y-3">
                 {messages.map((m) => (
@@ -274,6 +280,8 @@ export default function PremiumDatingAdvicePage() {
                     </div>
                   </div>
                 ))}
+                {/* bottom anchor for smooth autoscroll */}
+                <div ref={bottomRef} />
               </div>
             </div>
 
