@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import os from 'os';
+import Stripe from 'stripe';
 import multer from 'multer';
 import { adviceRouter } from './routes/advice';
 import { getEntitlements, setPremium, getDailyRemaining } from './entitlements';
@@ -363,6 +364,21 @@ app.get('/api/debug/stripe-env', (req, res) => {
     hasPriceId: !!process.env.STRIPE_PRICE_ID,
     appUrl: process.env.APP_URL || null,
   });
+});
+
+// Generic debug env route (useful for Railway / container checks)
+app.get('/api/debug/env', (req, res) => {
+  res.json({
+    hasStripeKey: !!process.env.STRIPE_SECRET_KEY,
+    hasPriceId: !!process.env.STRIPE_PRICE_ID,
+    appUrl: process.env.APP_URL || null,
+    nodeEnv: process.env.NODE_ENV || null,
+  });
+});
+
+// Debug cookies route to confirm cookie-parser is working
+app.get('/api/debug/cookies', (req, res) => {
+  res.json({ cookies: req.cookies || null });
 });
 
 // Root/info route
