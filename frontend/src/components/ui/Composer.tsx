@@ -16,6 +16,8 @@ interface ComposerProps {
   disabledSend?: boolean;
   isPremium?: boolean;
   onUpload?: (file: File) => void;
+  selectedTone?: string;
+  setTone?: (t: string) => void;
 }
 
 const Composer: React.FC<ComposerProps> = ({
@@ -29,6 +31,8 @@ const Composer: React.FC<ComposerProps> = ({
   placeholder,
   disabledSend = false,
   isPremium = false,
+  selectedTone,
+  setTone,
   onUpload,
 }) => {
   const taRef = useRef<HTMLTextAreaElement | null>(null);
@@ -60,6 +64,23 @@ const Composer: React.FC<ComposerProps> = ({
           value={mode}
           onChange={(v) => setMode(v as Mode)}
         />
+        {isPremium && (
+          <div className="ml-4 inline-block">
+            <label className="sr-only">Tone</label>
+            <select
+              value={selectedTone}
+              onChange={(e) => setTone && setTone(e.target.value)}
+              className="rounded-md border px-2 py-1 text-sm bg-white"
+            >
+              <option>Calm</option>
+              <option>Confident</option>
+              <option>Flirty</option>
+              <option>Direct</option>
+              <option>Funny</option>
+              <option>Serious</option>
+            </select>
+          </div>
+        )}
       </div>
 
       <div className="composer-body">

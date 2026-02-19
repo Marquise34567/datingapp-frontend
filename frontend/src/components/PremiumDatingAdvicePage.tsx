@@ -17,6 +17,9 @@ function cx(...classes: Array<string | false | null | undefined>) {
 export default function PremiumDatingAdvicePage() {
   
   const [messages, setMessages] = useState<Msg[]>([]);
+  const [isPremium, setIsPremium] = useState(false);
+  const [remaining, setRemaining] = useState<number | null>(null);
+  const [tone, setTone] = useState<string>('Calm');
   const [input, setInput] = useState("");
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -53,18 +56,22 @@ export default function PremiumDatingAdvicePage() {
     scrollToBottom();
   }, [messages]);
 
-  // On first mount, request an opener from the backend and insert it as the first assistant message
+  // On first mount: ensure token, then fetch opener + usage info
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const r = await fetch('/api/chat/init', { method: 'POST' });
+        // ensure cookie token exists
+        await fetch('/api/token', { method: 'POST', credentials: 'include' });
+
+        const r = await fetch('/api/chat/init', { method: 'POST', credentials: 'include' });
         const data = await r.json().catch(() => null);
         if (cancelled) return;
         if (!data || !data.ok) throw new Error(data?.error || 'init failed');
         const replyText = typeof data.reply === 'string' ? data.reply.trim() : '';
-        if (!replyText) throw new Error('empty reply');
-        setMessages([{ id: crypto.randomUUID(), role: 'assistant', text: replyText }]);
+        setMessages([{ id: crypto.randomUUID(), role: 'assistant', text: replyText || 'Hey — something glitched. Refresh and try again.' }]);
+        setIsPremium(Boolean(data?.usage?.isPremium));
+        setRemaining(data?.usage?.remaining ?? null);
       } catch (e) {
         if (cancelled) return;
         setMessages([{ id: crypto.randomUUID(), role: 'assistant', text: 'Hey — something glitched. Refresh and try again.' }]);
@@ -103,12 +110,25 @@ export default function PremiumDatingAdvicePage() {
       const result = await fetchAdvice({
         situation: "General dating conversation",
         goal: "Get the best next message + plan",
-        tone: "confident and smooth",
+        tone: isPremium ? tone : 'Neutral',
         conversation,
         userMessage: trimmed,
         mode,
         sessionId,
       });
+
+      // Handle paywall response (backend signals paywall without HTTP error)
+      if (result && result.paywall) {
+        // open upgrade modal and do not append assistant message
+        setShowModal(true);
+        return;
+      }
+
+      // update usage if provided
+      if (result?.usage) {
+        setIsPremium(Boolean(result.usage.isPremium));
+        setRemaining(result.usage.remaining ?? null);
+      }
 
       const assistantText = formatAdviceToText(result);
 
@@ -147,12 +167,22 @@ export default function PremiumDatingAdvicePage() {
       const result = await fetchAdvice({
         situation: "Quick strategist analysis",
         goal: "Fast verdict + next move",
-        tone: "direct and strategic",
+        tone: isPremium ? tone : 'Neutral',
         conversation,
         userMessage: trimmed,
         mode: "strategy",
         sessionId,
       });
+
+      if (result && result.paywall) {
+        setShowModal(true);
+        return;
+      }
+
+      if (result?.usage) {
+        setIsPremium(Boolean(result.usage.isPremium));
+        setRemaining(result.usage.remaining ?? null);
+      }
 
       const assistantText = formatAdviceToText(result);
 
@@ -314,11 +344,22 @@ export default function PremiumDatingAdvicePage() {
                     onQuickAnalyze={(t) => pushStrategy(t)}
                     /* Image upload disabled (coming soon) */
                     loading={loading}
-                    placeholder={placeholderText}
+                      placeholder={placeholderText}
+                      isPremium={isPremium}
+                      selectedTone={tone}
+                      setTone={(t) => setTone(t)}
                   />
                 </div>
               </div>
             </div>
+          </div>
+          {/* Remaining quota */}
+          <div className="mt-2 text-sm text-zinc-500">
+            {isPremium ? (
+              <span className="font-semibold">Premium: unlimited replies</span>
+            ) : (
+              <span>{remaining === null ? 'Replies left: —' : `${remaining} replies left today`}</span>
+            )}
           </div>
 
           {/* Side panel: show only after conversation is finished */}

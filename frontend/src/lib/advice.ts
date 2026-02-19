@@ -6,7 +6,7 @@ export type AdviceResponse = {
   datePlan?: any;
 };
 
-export async function fetchAdvice(payload: any): Promise<AdviceResponse> {
+export async function fetchAdvice(payload: any): Promise<any> {
   // Try to call the backend at the relative `/api/advice` endpoint.
   // If the network request fails (no backend running), fall back to a mock response.
   // If the backend responds with a non-2xx status, rethrow the structured error
@@ -34,7 +34,7 @@ export async function fetchAdvice(payload: any): Promise<AdviceResponse> {
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: body.text, mode: body.mode, sessionId: body.sessionId }),
+      body: JSON.stringify({ message: body.text, mode: body.mode, sessionId: body.sessionId, tone: body.tone }),
       credentials: 'include',
     });
 
@@ -45,10 +45,15 @@ export async function fetchAdvice(payload: any): Promise<AdviceResponse> {
       throw new Error(errMsg);
     }
 
+    // If backend signals a paywall, return it to the caller for UI handling
+    if (data?.paywall) {
+      return data;
+    }
+
     const reply = (data?.reply || data?.message || data?.advice || '') as string;
     if (!reply || !String(reply).trim()) throw new Error('Empty reply from backend');
 
-    return { message: String(reply), insights: data?.insights, strategy: data?.strategy, replies: data?.replies, datePlan: data?.datePlan };
+    return { message: String(reply), insights: data?.insights, strategy: data?.strategy, replies: data?.replies, datePlan: data?.datePlan, usage: data?.usage };
   } catch (err: any) {
     // Surface real errors to the UI; do not fabricate advice locally
     throw err;
