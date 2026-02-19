@@ -333,7 +333,7 @@ export default function PremiumDatingAdvicePage() {
         {/* Main layout */}
         <section className="mt-10 grid gap-6 lg:grid-cols-[1fr_380px]">
           {/* Chat panel */}
-          <div className="relative rounded-3xl border border-zinc-200 bg-white premium-shadow elevated overflow-hidden h-[70vh] flex flex-col min-h-0">
+          <div className="rounded-3xl border border-zinc-200 bg-white premium-shadow elevated overflow-hidden flex h-full min-h-0 flex-col">
             {/* Chat header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-100">
               <div className="flex items-center gap-3">
@@ -363,12 +363,12 @@ export default function PremiumDatingAdvicePage() {
             </div>
 
             {/* Messages + composer: messages scroll, composer stays pinned at bottom */}
-            <div className="flex-1 min-h-0 flex flex-col">
+            <div className="flex h-full min-h-0 flex-col">
               <ChatThread messages={messages} containerRef={listRef} />
 
-              <div className="absolute bottom-0 left-0 w-full z-30 border-t border-black/5 bg-white/80 backdrop-blur-sm px-0 py-3">
-                <div className="flex items-end gap-2 justify-start px-4">
-                  <div className="w-full max-w-2xl">
+              <div className="shrink-0 z-20 border-t border-black/5 bg-white/80 backdrop-blur-sm px-0 py-3">
+                <div className="flex items-end gap-2">
+                  <div className="flex-1">
                     <Composer
                       mode={mode}
                       setMode={(m) => setMode(m as 'dating_advice' | 'rizz' | 'strategy')}
