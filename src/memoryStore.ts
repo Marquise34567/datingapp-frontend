@@ -3,6 +3,26 @@ type Role = "user" | "coach";
 export type Turn = { role: Role; text: string; ts: number };
 
 const store = new Map<string, Turn[]>();
+const metaStore = new Map<string, Record<string, any>>();
+
+export type SessionMemory = {
+  whoEndedIt?: string;
+  why?: string;
+  whatHappened?: string;
+  userGoal?: string;
+  wantsClosure?: boolean;
+};
+
+export function setSessionMemory(sessionId: string, partial: Partial<SessionMemory>) {
+  const prev = (metaStore.get(sessionId) as SessionMemory) || {};
+  const next = { ...prev, ...partial } as SessionMemory;
+  metaStore.set(sessionId, next);
+  return next;
+}
+
+export function getSessionMemory(sessionId: string): SessionMemory {
+  return (metaStore.get(sessionId) as SessionMemory) || {};
+}
 
 export function getHistory(sessionId: string) {
   return store.get(sessionId) || [];

@@ -7,3 +7,5 @@ To eliminate this warning, add "type": "module" to C:\Users\Quise\name1\backend\
 (Use `node --trace-warnings ...` to show where the warning was created)
 advice body keys: [ 'sessionId', 'userMessage', 'mode' ]
 [api/advice] POST body: {"sessionId":"test-session","userMessage":"I got broken up with","mode":"dating_advice"}
+advice body keys: [ 'sessionId', 'userMessage', 'mode' ]
+[api/advice] POST body: {"sessionId":"test-session","userMessage":"I got broken up with","mode":"dating_advice"}
