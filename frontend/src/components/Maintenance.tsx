@@ -7,7 +7,7 @@ export default function Maintenance() {
         <div className="flex items-center gap-4">
           <img src="/sparkdd-favicon.svg" alt="Sparkd" className="h-14 w-14 rounded-lg shadow-md" />
           <div>
-            <h1 className="text-3xl font-["Playfair Display",serif] tracking-tight text-white">Sparkd is getting an upgrade</h1>
+            <h1 className="text-3xl tracking-tight text-white font-serif">Sparkd is getting an upgrade</h1>
             <p className="mt-1 text-sm text-zinc-300">We're improving the coach for a better experience.</p>
           </div>
         </div>

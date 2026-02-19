@@ -152,6 +152,9 @@ aside .rounded-3xl{padding:18px}
 /* Heading utility to use the decorative font */
 .heading{font-family:'Playfair Display', serif; font-weight:700; letter-spacing:-0.01em}
 
+/* Optional utility class to apply Playfair Display */
+.font-playfair{font-family:'Playfair Display', serif}
+
 /* Decorative gradient text for key words */
 .gradient-text{background:linear-gradient(90deg,var(--accent),#FF7AA2);-webkit-background-clip:text;background-clip:text;color:transparent}
 
