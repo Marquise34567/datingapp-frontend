@@ -16,19 +16,14 @@ function cx(...classes: Array<string | false | null | undefined>) {
 
 export default function PremiumDatingAdvicePage() {
   
-  const [messages, setMessages] = useState<Msg[]>([
-    {
-      id: "a1",
-      role: "assistant",
-      text: "Tell me what happened + what you want (closure, get them back, move on, or a text reply).",
-    },
-  ]);
+  const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const listRef = useRef<HTMLDivElement | null>(null);
+  const bottomRef = useRef<HTMLDivElement | null>(null);
   const [showInsights, setShowInsights] = useState(false);
   const [mode, setMode] = useState<"dating_advice" | "rizz" | "strategy">("dating_advice");
   const [sessionId] = useState(() => (crypto as any).randomUUID());
@@ -49,9 +44,34 @@ export default function PremiumDatingAdvicePage() {
   const placeholderText = input.trim().length > 0 ? '' : placeholders[placeholderIndex];
   function scrollToBottom() {
     requestAnimationFrame(() => {
-      listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" });
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
     });
   }
+
+  useEffect(() => {
+    // auto-scroll on new messages
+    scrollToBottom();
+  }, [messages]);
+
+  // On first mount, request an opener from the backend and insert it as the first assistant message
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch('/api/chat/init', { method: 'POST' });
+        const data = await r.json().catch(() => null);
+        if (cancelled) return;
+        if (!data || !data.ok) throw new Error(data?.error || 'init failed');
+        const replyText = typeof data.reply === 'string' ? data.reply.trim() : '';
+        if (!replyText) throw new Error('empty reply');
+        setMessages([{ id: crypto.randomUUID(), role: 'assistant', text: replyText }]);
+      } catch (e) {
+        if (cancelled) return;
+        setMessages([{ id: crypto.randomUUID(), role: 'assistant', text: 'Hey — something glitched. Refresh and try again.' }]);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   function formatAdviceToText(result: any) {
     // Prefer server-provided single-message response
@@ -264,7 +284,7 @@ export default function PremiumDatingAdvicePage() {
             {/* Messages */}
             <div
               ref={listRef}
-              className="h-[56vh] overflow-y-auto px-4 py-4"
+              className="h-[56vh] chat-scroll px-4 py-4"
             >
               <div className="space-y-3">
                 {messages.map((m) => (
@@ -274,6 +294,8 @@ export default function PremiumDatingAdvicePage() {
                     </div>
                   </div>
                 ))}
+                {/* bottom anchor for smooth autoscroll */}
+                <div ref={bottomRef} />
               </div>
             </div>
 
