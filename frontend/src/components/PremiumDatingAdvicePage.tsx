@@ -75,6 +75,18 @@ export default function PremiumDatingAdvicePage() {
     });
   }
 
+  // Auto-scroll when messages change, but only if the user is already near the bottom.
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
+    const distanceFromBottom = el.scrollHeight - (el.scrollTop + el.clientHeight);
+    const NEAR_BOTTOM_PX = 160;
+    if (distanceFromBottom <= NEAR_BOTTOM_PX) {
+      scrollToBottom();
+    }
+    // otherwise, do not force-scroll so users can read history
+  }, [messages]);
+
   function formatAdviceToText(result: any) {
     // Prefer server-provided single-message response
     if (typeof result?.message === "string" && result.message.trim().length > 0) {
