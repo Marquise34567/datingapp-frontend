@@ -326,14 +326,14 @@ export default function PremiumDatingAdvicePage() {
       </header>
 
       {/* Content */}
-        <main className="mx-auto max-w-6xl px-4 py-8 relative">
+        <main className="mx-auto max-w-6xl px-4 py-8 relative min-h-[calc(100vh-80px)]">
           <div className="hearts-decor" />
         {/* HeroCard removed */}
 
         {/* Main layout */}
         <section className="mt-10 grid gap-6 lg:grid-cols-[1fr_380px]">
           {/* Chat panel */}
-          <div className="rounded-3xl border border-zinc-200 bg-white premium-shadow elevated overflow-hidden">
+          <div className="rounded-3xl border border-zinc-200 bg-white premium-shadow elevated overflow-hidden flex h-full min-h-0 flex-col">
             {/* Chat header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-100">
               <div className="flex items-center gap-3">
@@ -362,11 +362,11 @@ export default function PremiumDatingAdvicePage() {
               <div className="text-xs text-zinc-500">Online</div>
             </div>
 
-            {/* Messages + sticky composer: make chat follow and composer stay visible */}
-            <div className="flex flex-col h-[56vh]">
+            {/* Messages + composer: messages scroll, composer stays pinned at bottom */}
+            <div className="flex h-full min-h-0 flex-col">
               <ChatThread messages={messages} containerRef={listRef} />
 
-              <div className="shrink-0 bg-white/90 backdrop-blur border-t border-zinc-100 p-4">
+              <div className="shrink-0 z-20 border-t border-black/5 bg-white/80 backdrop-blur-sm px-0 py-3">
                 <div className="flex items-end gap-2">
                   <div className="flex-1">
                     <Composer

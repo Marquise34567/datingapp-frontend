@@ -26,7 +26,7 @@ export default function ChatThread({ messages, containerRef }: { messages: Msg[]
   }, [messages.length]);
 
   return (
-    <div ref={ref} className="flex-1 overflow-y-auto px-4 py-4 pb-28">
+    <div ref={ref} className="flex-1 overflow-y-auto px-4 py-4 pb-40">
       <div className="space-y-3">
         {messages.map((m) => (
           <div key={m.id} className={m.role === 'user' ? 'flex justify-end' : 'flex justify-start'}>
