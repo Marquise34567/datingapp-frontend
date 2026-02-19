@@ -12,10 +12,13 @@ export async function fetchAdvice(payload: any): Promise<AdviceResponse> {
   // If an API URL is provided via env, forward the request to the backend.
   if (API_URL) {
     // Normalize fields the backend accepts (message / text / input)
+    const rawMode = payload?.mode ?? payload?.tab;
+    const normalizedMode = rawMode === 'dating_advice' ? 'dating' : rawMode;
+
     const body = {
       // prefer explicit message/text then fall back to common keys
       message: payload?.message ?? payload?.text ?? payload?.userMessage ?? payload?.input ?? '',
-      mode: payload?.mode ?? payload?.tab,
+      mode: normalizedMode,
       // forward everything else so backend can use conversation/sessionId/etc
       conversation: payload?.conversation,
       sessionId: payload?.sessionId,
