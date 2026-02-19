@@ -112,11 +112,11 @@ const Composer: React.FC<ComposerProps> = ({
             type="button"
             variant="primary"
             size="sm"
-            onClick={() => { /* upload coming soon */ }}
-            aria-label="Upload screenshot (coming soon)"
-            title="Upload screenshot — coming soon"
+            onClick={() => fileRef.current?.click()}
+            aria-label="Upload screenshot"
+            title="Upload screenshot"
             className="flex items-center gap-2"
-            disabled={true}
+            disabled={false}
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-white">
               <rect x="3" y="7" width="18" height="14" rx="2" ry="2" />
