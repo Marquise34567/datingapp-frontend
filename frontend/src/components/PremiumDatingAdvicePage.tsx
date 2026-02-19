@@ -20,12 +20,7 @@ export default function PremiumDatingAdvicePage() {
     {
       id: "a1",
       role: "assistant",
-      text: "Tell me what you want help with — paste the convo or describe the vibe.",
-    },
-    {
-      id: "a2",
-      role: "assistant",
-      text: "Pick a mode (Dating advice or Rizz), then type what happened. I’ll tell you what to say next.",
+      text: "Tell me what happened + what you want (closure, get them back, move on, or a text reply).",
     },
   ]);
   const [input, setInput] = useState("");
