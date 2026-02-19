@@ -80,7 +80,18 @@ function extractMessage(data: unknown): string {
   return d.message ?? d.reply ?? d.text ?? d.advice ?? (d.error ? `Error: ${d.error}` : "");
 }
 
-async function llmAssist(opts: { mode: Mode; userMessage: string; sessionId: string; intent: Intent; advanced?: boolean }) {
+function badReply(s: string) {
+  const lower = (s || "").toLowerCase();
+  return (
+    lower.includes("that's real") ||
+    lower.includes("aight") ||
+    lower.includes("say less") ||
+    lower.includes("tell me one sentence") ||
+    (s || "").length < 20
+  );
+}
+
+async function llmAssist(opts: { mode: Mode; userMessage: string; sessionId: string; intent: Intent; advanced?: boolean; repairInstruction?: string }) {
   const { mode, userMessage, sessionId, intent, advanced = false } = opts as any;
   const h = getHistory(sessionId).slice(-12);
   const transcript = h.map((x) => `${x.role === "user" ? "USER" : "COACH"}: ${x.text}`).join("\n");
@@ -157,7 +168,10 @@ Produce only valid JSON. If you cannot answer, return at minimum {"reply":"I cou
     content: String(turn.text || ""),
   }));
 
-  const finalUserContent = `Mode: ${mode}\n\nLatest user message:\n${userMessage}\n\nPlease produce a JSON object matching the schema EXACTLY (reply, draft_texts, questions, next_steps). Output only valid JSON.`;
+  let finalUserContent = `Mode: ${mode}\n\nLatest user message:\n${userMessage}\n\nPlease produce a JSON object matching the schema EXACTLY (reply, draft_texts, questions, next_steps). Output only valid JSON.`;
+  if (opts.repairInstruction) {
+    finalUserContent += `\n\nREPAIR INSTRUCTION: ${opts.repairInstruction}`;
+  }
 
   const messages = [
     { role: "system", content: system },
@@ -196,6 +210,26 @@ export async function coachBrainV2(body: { sessionId: string; userMessage: strin
       }
 
       if (parsed && typeof parsed.reply === 'string') {
+        // validate reply and optionally repair
+        if (badReply(parsed.reply)) {
+          try {
+            const repairInstruction = "Rewrite the reply to be warm, human, and specific. No slang. Start with a compassionate sentence. Provide actionable steps and 3 draft texts if texting is relevant. Return valid JSON only.";
+            const raw2 = String(await llmAssist({ mode, userMessage: msg, sessionId, intent, advanced, repairInstruction }));
+            let parsed2: any = null;
+            try {
+              parsed2 = JSON.parse(raw2);
+            } catch (e) {
+              // ignore
+            }
+            if (parsed2 && typeof parsed2.reply === 'string') {
+              reply = parsed2.reply.trim();
+              return { message: reply, ...(parsed2 ? { coach: parsed2 } as any : {}) } as any;
+            }
+          } catch (e) {
+            // repair attempt failed — fall back to original parsed
+          }
+        }
+
         reply = parsed.reply.trim();
         // attach coach object to return shape via message+coach mapping (caller can use coach)
         return { message: reply, ...(parsed ? { coach: parsed } as any : {}) } as any;
