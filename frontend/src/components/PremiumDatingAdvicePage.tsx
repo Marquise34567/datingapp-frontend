@@ -31,6 +31,7 @@ export default function PremiumDatingAdvicePage() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [showModal, setShowModal] = useState(false);
   const listRef = useRef<HTMLDivElement | null>(null);
   const [showInsights, setShowInsights] = useState(false);
   const [mode, setMode] = useState<"dating_advice" | "rizz" | "strategy">("dating_advice");
@@ -192,7 +193,7 @@ export default function PremiumDatingAdvicePage() {
                 Good
               </span>
               <span className="text-sm text-zinc-500">7.4/10</span>
-              <Button size="sm" variant="primary" className="ml-2" onClick={handleUpgrade} disabled={checkoutLoading}>
+              <Button size="sm" variant="primary" className="ml-2" onClick={() => setShowModal(true)} disabled={checkoutLoading}>
                 {checkoutLoading ? "Opening..." : "Upgrade"}
               </Button>
               {/* Sign-in removed - app no longer uses auth UI */}
@@ -333,7 +334,69 @@ export default function PremiumDatingAdvicePage() {
           )}
         </section>
 
-        {/* Premium modal removed */}
+        {/* Premium modal */}
+        {showModal && (
+          <div className="fixed inset-0 z-50">
+            <div className="absolute inset-0 bg-black/50" onClick={() => setShowModal(false)} />
+
+            <div className="relative z-10 flex min-h-full items-center justify-center p-4">
+              <div role="dialog" aria-modal="true" className="w-full max-w-xl rounded-2xl border border-zinc-200 bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start p-6">
+                  <div className="lg:col-span-2">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-2xl font-bold">Spark Premium</div>
+                        <div className="mt-1 text-sm text-zinc-500">Unlimited conversations, advanced coaching, and priority support.</div>
+                      </div>
+                      <button className="text-zinc-500" onClick={() => setShowModal(false)}>✕</button>
+                    </div>
+
+                    <div className="mt-6 flex items-center gap-6">
+                      <div className="text-4xl font-extrabold">$19<span className="text-base font-medium text-zinc-400">/mo</span></div>
+                      <div className="rounded-full px-3 py-1 text-xs font-semibold text-white" style={{ background: 'linear-gradient(90deg,#ff7a59,#ff4d8d)' }}>Popular</div>
+                    </div>
+
+                    <ul className="mt-6 space-y-3 text-sm text-zinc-700">
+                      <li>• Unlimited Spark conversations every day</li>
+                      <li>• Advanced, richer coaching replies (more options + deeper steps)</li>
+                      <li>• Priority model capacity and faster responses</li>
+                      <li>• Tone controls, date plans, and follow-up sequences</li>
+                    </ul>
+
+                    <div className="mt-6 text-sm text-zinc-500">Secure checkout by Stripe.</div>
+                  </div>
+
+                  <div className="lg:col-span-1">
+                    <div className="rounded-xl border border-zinc-100 p-4 shadow-sm bg-linear-to-br from-white to-zinc-50">
+                      <div className="text-xs text-zinc-500">Your plan</div>
+                      <div className="mt-2 text-lg font-semibold">Spark Premium</div>
+                      <div className="mt-3">
+                        <Button
+                          type="button"
+                          className="w-full"
+                          variant="primary"
+                          size="md"
+                          onClick={async () => {
+                            try {
+                              await handleUpgrade();
+                              setShowModal(false);
+                            } catch (err) {
+                              console.error('checkout error', err);
+                            }
+                          }}
+                          disabled={checkoutLoading}
+                        >
+                          {checkoutLoading ? 'Starting checkout…' : 'Upgrade & Checkout'}
+                        </Button>
+                      </div>
+                      <div className="mt-3 text-xs text-zinc-400">No commitment — cancel anytime.</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         <footer className="mt-10 text-center text-xs text-zinc-400">
           © {new Date().getFullYear()} Sparky • Premium UI (backend coming next)
