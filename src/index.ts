@@ -704,34 +704,45 @@ app.post('/api/admin/set-premium', (req, res) => {
 
 // Dev stub: create a checkout session and return a checkout URL.
 app.post('/api/checkout', async (req, res) => {
-	const sessionId = (req.body && (req.body as any).sessionId) || req.headers['x-session-id'] || (req as any).sessionId;
+	const body = req.body || {};
+	const sessionId = body.sessionId || body.uid || req.headers['x-session-id'] || (req as any).sessionId;
 	if (!sessionId) return res.status(400).json({ ok: false, error: 'sessionId required' });
 
-	// If Stripe not configured, return a dev stub URL
-	const stripeSecret = process.env.STRIPE_SECRET;
-	const priceId = process.env.STRIPE_PRICE_ID || 'price_1T2NLoAgdqex7SFJZCMoi7pv';
+	const stripeSecret = process.env.STRIPE_SECRET_KEY;
+	const priceId = process.env.STRIPE_PRICE_ID;
+	const appUrl = process.env.APP_URL || 'http://localhost:5173';
+
 	if (!stripeSecret || !priceId) {
-		const base = process.env.CHECKOUT_BASE || 'https://checkout.example.com';
-		const returnUrl = process.env.CHECKOUT_RETURN || 'http://localhost:5173';
-		const url = `${base}/?sessionId=${encodeURIComponent(String(sessionId))}&returnUrl=${encodeURIComponent(returnUrl)}`;
-		return res.json({ ok: true, url });
+		console.warn('stripe config missing: STRIPE_SECRET_KEY or STRIPE_PRICE_ID');
+		return res.status(500).json({ ok: false, error: 'stripe configuration missing' });
 	}
 
 	try {
 		const Stripe = (await import('stripe')).default;
-		const stripe = new Stripe(stripeSecret, { apiVersion: '2022-11-15' });
+		const stripe = new Stripe(String(stripeSecret), { apiVersion: '2022-11-15' });
+
+		const email = (body && (body.email as string)) || (req.headers['x-user-email'] as string) || undefined;
+
+		const successUrl = `${appUrl.replace(/\/$/, '')}/billing/success?session_id={CHECKOUT_SESSION_ID}`;
+		const cancelUrl = `${appUrl.replace(/\/$/, '')}/billing/cancel`;
 
 		const session = await stripe.checkout.sessions.create({
 			mode: 'subscription',
-			line_items: [{ price: priceId, quantity: 1 }],
+			line_items: [{ price: String(priceId), quantity: 1 }],
 			client_reference_id: String(sessionId),
-			success_url: process.env.CHECKOUT_RETURN || 'http://localhost:5173/?session=success',
-			cancel_url: process.env.CHECKOUT_RETURN || 'http://localhost:5173/?session=cancel',
+			customer_email: email || undefined,
+			success_url: successUrl,
+			cancel_url: cancelUrl,
 		});
 
+		if (!session || !session.url) {
+			console.warn('Stripe session created but no url returned', session);
+			return res.status(500).json({ ok: false, error: 'No checkout url returned' });
+		}
+
 		return res.json({ ok: true, url: session.url });
-	} catch (err) {
-		console.warn('checkout create failed', err);
+	} catch (err: any) {
+		console.warn('checkout create failed', err && err.message ? err.message : err);
 		return res.status(500).json({ ok: false, error: 'Failed to create checkout' });
 	}
 });

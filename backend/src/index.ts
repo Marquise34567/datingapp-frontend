@@ -15,7 +15,8 @@ app.post('/api/webhook/stripe', express.raw({ type: 'application/json' }), (req,
   if (!webhookSecret) return res.status(400).json({ ok: false, error: 'webhook not configured' });
   try {
     const Stripe = require('stripe');
-    const stripe = new Stripe(process.env.STRIPE_SECRET, { apiVersion: '2022-11-15' });
+    const stripeSecretEnv = process.env.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET;
+    const stripe = new Stripe(String(stripeSecretEnv), { apiVersion: '2022-11-15' });
     const event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
 
     if (event.type === 'checkout.session.completed') {
@@ -115,32 +116,134 @@ app.post('/api/admin/set-premium', (req, res) => {
 
 // Dev stub: create a checkout session and return a checkout URL.
 app.post('/api/checkout', async (req, res) => {
-  const sessionId = (req.body && ((req.body as any).sessionId || (req.body as any).uid)) || req.headers['x-session-id'];
+  // Create a Stripe Checkout Session for a subscription and return the hosted URL
+  const body = req.body || {};
+  const sessionId = body.sessionId || body.uid || req.headers['x-session-id'];
   if (!sessionId) return res.status(400).json({ ok: false, error: 'sessionId required' });
 
-  const stripeSecret = process.env.STRIPE_SECRET;
-  const priceId = process.env.STRIPE_PRICE_ID || 'price_1T2NLoAgdqex7SFJZCMoi7pv';
+  const stripeSecret = process.env.STRIPE_SECRET_KEY;
+  const rawPrice = process.env.STRIPE_PRICE_ID || '';
+  const priceId = rawPrice.trim().replace(/[^\w-]/g, '');
+  const appUrl = process.env.APP_URL || `http://localhost:${process.env.FRONTEND_PORT || 5173}`;
+
   if (!stripeSecret || !priceId) {
-    const base = process.env.CHECKOUT_BASE || 'https://checkout.example.com';
-    const returnUrl = process.env.CHECKOUT_RETURN || `http://localhost:${process.env.PORT || 5173}`;
-    const url = `${base}/?sessionId=${encodeURIComponent(String(sessionId))}&returnUrl=${encodeURIComponent(returnUrl)}`;
-    return res.json({ ok: true, url });
+    console.warn('stripe config missing: STRIPE_SECRET_KEY or STRIPE_PRICE_ID');
+    return res.status(500).json({ ok: false, error: 'stripe configuration missing' });
   }
 
   try {
     const Stripe = (await import('stripe')).default;
-    const stripe = new Stripe(stripeSecret, { apiVersion: '2022-11-15' });
+    const stripe = new Stripe(String(stripeSecret), { apiVersion: '2022-11-15' });
+
+    const email = (body && (body.email as string)) || (req.headers['x-user-email'] as string) || undefined;
+
+    const successUrl = `${appUrl.replace(/\/$/, '')}/billing/success?session_id={CHECKOUT_SESSION_ID}`;
+    const cancelUrl = `${appUrl.replace(/\/$/, '')}/billing/cancel`;
+
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
-      line_items: [{ price: priceId, quantity: 1 }],
+      line_items: [{ price: String(priceId), quantity: 1 }],
       client_reference_id: String(sessionId),
-      success_url: process.env.CHECKOUT_RETURN || `http://localhost:${process.env.PORT || 5173}/?session=success`,
-      cancel_url: process.env.CHECKOUT_RETURN || `http://localhost:${process.env.PORT || 5173}/?session=cancel`,
+      customer_email: email || undefined,
+      success_url: successUrl,
+      cancel_url: cancelUrl,
     });
+
+    if (!session || !session.url) {
+      console.warn('Stripe session created but no url returned', session);
+      return res.status(500).json({ ok: false, error: 'No checkout url returned' });
+    }
+
     return res.json({ ok: true, url: session.url });
-  } catch (err) {
+  } catch (err: any) {
     console.warn('checkout create failed', err);
-    return res.status(500).json({ ok: false, error: 'Failed to create checkout' });
+    return res.status(500).json({ ok: false, error: err?.message ?? 'Failed to create checkout', details: err?.code ?? null });
+  }
+});
+
+// New route: create a Stripe Checkout Session and return session.url
+app.post('/api/billing/create-checkout-session', async (req, res) => {
+  try {
+    const body = req.body || {};
+    const sessionId = body.sessionId || body.uid || req.headers['x-session-id'];
+    if (!sessionId) return res.status(400).json({ ok: false, error: 'sessionId required' });
+
+    const stripeSecret = process.env.STRIPE_SECRET_KEY;
+    const rawPrice = process.env.STRIPE_PRICE_ID || '';
+    const priceId = rawPrice.trim().replace(/[^\w-]/g, '');
+    const appUrl = (process.env.APP_URL || `http://localhost:${process.env.FRONTEND_PORT || 5173}`).replace(/\/$/, '');
+
+    if (!stripeSecret || !priceId) {
+      console.warn('Missing STRIPE_SECRET_KEY or STRIPE_PRICE_ID');
+      return res.status(500).json({ ok: false, error: 'stripe configuration missing' });
+    }
+
+    const Stripe = (await import('stripe')).default;
+    const stripe = new Stripe(String(stripeSecret), { apiVersion: '2022-11-15' });
+
+    const email = (body && (body.email as string)) || (req.headers['x-user-email'] as string) || undefined;
+
+    const session = await stripe.checkout.sessions.create({
+      mode: 'subscription',
+      line_items: [{ price: String(priceId), quantity: 1 }],
+      client_reference_id: String(sessionId),
+      customer_email: email || undefined,
+      success_url: `${appUrl}/billing/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${appUrl}/billing/cancel`,
+    });
+
+    if (!session || !session.url) {
+      console.warn('Stripe session created but no url returned', session);
+      return res.status(500).json({ ok: false, error: 'No checkout url returned' });
+    }
+
+    return res.json({ url: session.url });
+  } catch (err: any) {
+    console.warn('create-checkout-session failed', err);
+    return res.status(500).json({ ok: false, error: err?.message ?? 'Failed to create checkout session', stripeError: err?.type ?? null });
+  }
+});
+
+// Compatibility route: some clients call /api/stripe/create-checkout-session
+app.post('/api/stripe/create-checkout-session', async (req, res) => {
+  try {
+    const body = req.body || {};
+    const sessionId = body.sessionId || body.uid || req.headers['x-session-id'];
+    if (!sessionId) return res.status(400).json({ ok: false, error: 'sessionId required' });
+
+    const stripeSecret = process.env.STRIPE_SECRET_KEY;
+    const rawPrice = process.env.STRIPE_PRICE_ID || '';
+    const priceId = rawPrice.trim().replace(/[^\w-]/g, '');
+    const appUrl = (process.env.APP_URL || `http://localhost:${process.env.FRONTEND_PORT || 5173}`).replace(/\/$/, '');
+
+    if (!stripeSecret || !priceId) {
+      console.warn('Missing STRIPE_SECRET_KEY or STRIPE_PRICE_ID (compat route)');
+      return res.status(500).json({ ok: false, error: 'stripe configuration missing' });
+    }
+
+    const Stripe = (await import('stripe')).default;
+    const stripe = new Stripe(String(stripeSecret), { apiVersion: '2022-11-15' });
+
+    const email = (body && (body.email as string)) || (req.headers['x-user-email'] as string) || undefined;
+
+    const session = await stripe.checkout.sessions.create({
+      mode: 'subscription',
+      line_items: [{ price: String(priceId), quantity: 1 }],
+      client_reference_id: String(sessionId),
+      customer_email: email || undefined,
+      success_url: `${appUrl}/billing/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${appUrl}/billing/cancel`,
+    });
+
+    if (!session || !session.url) {
+      console.warn('Stripe session created but no url returned (compat route)', session);
+      return res.status(500).json({ ok: false, error: 'No checkout url returned' });
+    }
+
+    return res.json({ url: session.url });
+  } catch (err: any) {
+    console.warn('create-checkout-session (compat) failed', err);
+    return res.status(500).json({ ok: false, error: err?.message ?? 'Failed to create checkout session', stripeError: err?.type ?? null });
   }
 });
 
