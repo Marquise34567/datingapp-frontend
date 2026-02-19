@@ -367,8 +367,8 @@ export default function PremiumDatingAdvicePage() {
               <ChatThread messages={messages} containerRef={listRef} />
 
               <div className="shrink-0 z-20 border-t border-black/5 bg-white/80 backdrop-blur-sm px-0 py-3">
-                <div className="flex items-end gap-2">
-                  <div className="flex-1">
+                <div className="flex items-end gap-2 justify-start px-4">
+                  <div className="w-full max-w-2xl">
                     <Composer
                       mode={mode}
                       setMode={(m) => setMode(m as 'dating_advice' | 'rizz' | 'strategy')}
