@@ -34,7 +34,6 @@ export default function PremiumDatingAdvicePage() {
   const [showInsights, setShowInsights] = useState(false);
   const [mode, setMode] = useState<"dating_advice" | "rizz" | "strategy">("dating_advice");
   const [sessionId] = useState(() => (crypto as any).randomUUID());
-  const [error, setError] = useState<any>(null);
 
   const canSend = useMemo(() => input.trim().length > 0, [input]);
   const placeholders = [
@@ -96,7 +95,6 @@ export default function PremiumDatingAdvicePage() {
   async function pushUser(text: string) {
     const trimmed = text.trim();
     if (!trimmed || loading) return;
-    setError(null);
     setMessages((prev) => [...prev, { id: crypto.randomUUID(), role: "user", text: trimmed }]);
     setInput("");
     setLoading(true);
@@ -112,7 +110,7 @@ export default function PremiumDatingAdvicePage() {
         goal: "Get the best next message + plan",
         tone: "confident and smooth",
         conversation,
-        userMessage: trimmed,
+        message: trimmed,
         mode,
         sessionId,
       });
@@ -128,7 +126,7 @@ export default function PremiumDatingAdvicePage() {
         },
       ]);
     } catch (e: any) {
-      setError(e);
+      console.error('fetchAdvice error', e);
     } finally {
       setLoading(false);
     }
@@ -137,7 +135,6 @@ export default function PremiumDatingAdvicePage() {
   async function pushStrategy(text: string) {
     const trimmed = (text || "").trim();
     if (!trimmed || loading) return;
-    setError(null);
     setMessages((prev) => [...prev, { id: crypto.randomUUID(), role: "user", text: trimmed }]);
     setInput("");
     setLoading(true);
@@ -153,7 +150,7 @@ export default function PremiumDatingAdvicePage() {
         goal: "Fast verdict + next move",
         tone: "direct and strategic",
         conversation,
-        userMessage: trimmed,
+        message: trimmed,
         mode: "strategy",
         sessionId,
       });
@@ -169,7 +166,7 @@ export default function PremiumDatingAdvicePage() {
         },
       ]);
     } catch (e: any) {
-      setError(e);
+      console.error('fetchAdvice error', e);
     } finally {
       setLoading(false);
     }
@@ -275,11 +272,7 @@ export default function PremiumDatingAdvicePage() {
                 </div>
               </div>
             </div>
-            {error && (
-              <pre className="mt-3 rounded-xl border bg-white p-3 text-xs text-red-600 whitespace-pre-wrap">
-                {getErrorMessage(error)}
-              </pre>
-            )}
+            {/* errors are logged to console (no UI error pane) */}
           </div>
 
           {/* Side panel: show only after conversation is finished */}
