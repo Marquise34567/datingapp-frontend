@@ -3,10 +3,8 @@
 import React, { useMemo, useRef, useState, useEffect } from "react";
 import { fetchAdvice } from "../lib/advice";
 import Button from "./ui/Button";
-import { fetchEntitlements, Entitlements } from "../lib/entitlements";
-import { createCheckoutSession } from "../lib/checkout";
 import Composer from "./ui/Composer";
-import ChatThread from "./ui/ChatThread";
+import { createCheckoutSession } from "../lib/checkout";
 
 type Msg = { id: string; role: "user" | "assistant"; text: string };
 
@@ -17,11 +15,10 @@ function cx(...classes: Array<string | false | null | undefined>) {
 }
 
 export default function PremiumDatingAdvicePage() {
-  const [showModal, setShowModal] = useState(false);
+  
   const [messages, setMessages] = useState<Msg[]>([
     {
       id: "a1",
-
       role: "assistant",
       text: "Tell me what you want help with — paste the convo or describe the vibe.",
     },
@@ -33,13 +30,11 @@ export default function PremiumDatingAdvicePage() {
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
   const listRef = useRef<HTMLDivElement | null>(null);
   const [showInsights, setShowInsights] = useState(false);
   const [mode, setMode] = useState<"dating_advice" | "rizz" | "strategy">("dating_advice");
   const [sessionId] = useState(() => (crypto as any).randomUUID());
-  const [entitlements, setEntitlements] = useState<Entitlements | null>(null);
-  const [dailyLimitReached, setDailyLimitReached] = useState(false);
-  const [upgradeShownThisConversation, setUpgradeShownThisConversation] = useState(false);
 
   const canSend = useMemo(() => input.trim().length > 0, [input]);
   const placeholders = [
@@ -55,38 +50,11 @@ export default function PremiumDatingAdvicePage() {
     return () => clearInterval(id);
   }, [input]);
   const placeholderText = input.trim().length > 0 ? '' : placeholders[placeholderIndex];
-
-  // fetch entitlements on load
-  useEffect(() => {
-    (async () => {
-      try {
-        const e = await fetchEntitlements(sessionId);
-        setEntitlements(e);
-        if (e && typeof e.dailyRemaining === 'number' && e.dailyRemaining <= 0 && !e.isPremium) {
-          setDailyLimitReached(true);
-        }
-      } catch (err) {
-        console.warn('fetchEntitlements error', err);
-      }
-    })();
-  }, [sessionId]);
   function scrollToBottom() {
     requestAnimationFrame(() => {
       listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" });
     });
   }
-
-  // Auto-scroll when messages change, but only if the user is already near the bottom.
-  useEffect(() => {
-    const el = listRef.current;
-    if (!el) return;
-    const distanceFromBottom = el.scrollHeight - (el.scrollTop + el.clientHeight);
-    const NEAR_BOTTOM_PX = 160;
-    if (distanceFromBottom <= NEAR_BOTTOM_PX) {
-      scrollToBottom();
-    }
-    // otherwise, do not force-scroll so users can read history
-  }, [messages]);
 
   function formatAdviceToText(result: any) {
     // Prefer server-provided single-message response
@@ -101,33 +69,10 @@ export default function PremiumDatingAdvicePage() {
     return `${headline}${why}${pick}`.trim();
   }
 
-  function getErrorMessage(err: any) {
-    // our fetchAdvice throws structured errors { status, body, raw }
-    if (err?.status) {
-      const body = err.body ?? (err.raw ? err.raw : null);
-      const message = body?.message ?? body?.error ?? body ?? null;
-      return JSON.stringify({ status: err.status, message, body }, null, 2);
-    }
-    // axios style
-    const axiosMsg =
-      err?.response?.data?.message ||
-      err?.response?.data?.error ||
-      err?.response?.data;
-
-    if (typeof axiosMsg === "string") return axiosMsg;
-    if (axiosMsg) return JSON.stringify(axiosMsg, null, 2);
-
-    // fetch style
-    if (err instanceof Error) return err.message;
-
-    if (typeof err === "string") return err;
-
-    return JSON.stringify(err, null, 2);
-  }
-
   async function pushUser(text: string) {
     const trimmed = text.trim();
     if (!trimmed || loading) return;
+
     setMessages((prev) => [...prev, { id: crypto.randomUUID(), role: "user", text: trimmed }]);
     setInput("");
     setLoading(true);
@@ -143,7 +88,7 @@ export default function PremiumDatingAdvicePage() {
         goal: "Get the best next message + plan",
         tone: "confident and smooth",
         conversation,
-        message: trimmed,
+        userMessage: trimmed,
         mode,
         sessionId,
       });
@@ -159,31 +104,10 @@ export default function PremiumDatingAdvicePage() {
         },
       ]);
     } catch (e: any) {
-      console.error('fetchAdvice error', e);
-      if (e?.status === 429 && e?.body?.code === 'DAILY_LIMIT') {
-        setDailyLimitReached(true);
-        setShowModal(true);
-
-          // Show upgrade modal mid-conversation for free users once
-          try {
-            if (entitlements && !entitlements.isPremium && !upgradeShownThisConversation) {
-              // If conversation already has a few turns, show mid-convo; otherwise show after this reply
-              const priorTurns = messages.filter((m) => m.role === 'user' || m.role === 'assistant').length;
-              if (priorTurns >= 3) {
-                setShowModal(true);
-                setUpgradeShownThisConversation(true);
-              }
-            }
-          } catch (e) {
-            console.warn('upgrade modal check failed', e);
-          }
-        try {
-          const e2 = await fetchEntitlements(sessionId);
-          setEntitlements(e2);
-        } catch (er) {
-          console.warn('refresh entitlements failed', er);
-        }
-      }
+      setMessages((prev) => [
+        ...prev,
+        { id: crypto.randomUUID(), role: "assistant", text: `Error: ${e.message}` },
+      ]);
     } finally {
       setLoading(false);
     }
@@ -192,6 +116,7 @@ export default function PremiumDatingAdvicePage() {
   async function pushStrategy(text: string) {
     const trimmed = (text || "").trim();
     if (!trimmed || loading) return;
+
     setMessages((prev) => [...prev, { id: crypto.randomUUID(), role: "user", text: trimmed }]);
     setInput("");
     setLoading(true);
@@ -207,7 +132,7 @@ export default function PremiumDatingAdvicePage() {
         goal: "Fast verdict + next move",
         tone: "direct and strategic",
         conversation,
-        message: trimmed,
+        userMessage: trimmed,
         mode: "strategy",
         sessionId,
       });
@@ -223,48 +148,25 @@ export default function PremiumDatingAdvicePage() {
         },
       ]);
     } catch (e: any) {
-      console.error('fetchAdvice error', e);
-      if (e?.status === 429 && e?.body?.code === 'DAILY_LIMIT') {
-        setDailyLimitReached(true);
-        setShowModal(true);
-
-          // Show upgrade modal mid-conversation for free users once
-          try {
-            if (entitlements && !entitlements.isPremium && !upgradeShownThisConversation) {
-              const priorTurns = messages.filter((m) => m.role === 'user' || m.role === 'assistant').length;
-              if (priorTurns >= 3) {
-                setShowModal(true);
-                setUpgradeShownThisConversation(true);
-              }
-            }
-          } catch (e) {
-            console.warn('upgrade modal check failed', e);
-          }
-        try {
-          const e2 = await fetchEntitlements(sessionId);
-          setEntitlements(e2);
-        } catch (er) {
-          console.warn('refresh entitlements failed', er);
-        }
-      }
+      setMessages((prev) => [
+        ...prev,
+        { id: crypto.randomUUID(), role: "assistant", text: `Error: ${e.message}` },
+      ]);
     } finally {
       setLoading(false);
     }
   }
 
-  async function contactSupport() {
+  async function handleUpgrade() {
+    setCheckoutLoading(true);
     try {
-      const res = await fetch(`/api/support`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId }),
-      });
-      const j = await res.json();
-      if (!res.ok) throw j;
-      alert('Support request sent. We will respond shortly.');
-    } catch (err) {
-      console.warn('support error', err);
-      alert('Support request failed. Premium only.');
+      const url = await createCheckoutSession(sessionId);
+      window.open(url, "_blank");
+    } catch (e: any) {
+      console.error("checkout error", e);
+      alert("Failed to start checkout. Please try again.");
+    } finally {
+      setCheckoutLoading(false);
     }
   }
 
@@ -272,7 +174,7 @@ export default function PremiumDatingAdvicePage() {
     <div className="min-h-screen app-bg">
       {/* Top Nav */}
       <header className="sticky top-0 z-20 border-b border-white/10 bg-linear-to-br from-white/5 to-white/10 backdrop-blur-md">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
+          <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
             <div className="h-9 w-9 rounded-2xl bg-linear-to-br from-zinc-950 to-zinc-700 text-white grid place-items-center">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor" aria-hidden="true">
@@ -280,26 +182,21 @@ export default function PremiumDatingAdvicePage() {
               </svg>
             </div>
             <div className="leading-tight">
-              <div className="text-sm font-semibold gradient-text">Sparkd</div>
+              <div className="text-sm font-semibold gradient-text">Sparky</div>
               <div className="text-xs text-zinc-500">Modern dating coach</div>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-              {entitlements && entitlements.isPremium ? 'Premium' : 'Free'}
-            </span>
-            {entitlements && entitlements.isPremium ? (
-              <Button type="button" variant="ghost" size="sm" onClick={contactSupport}>
-                Contact Priority Support
+              <div className="flex items-center gap-2">
+              <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                Good
+              </span>
+              <span className="text-sm text-zinc-500">7.4/10</span>
+              <Button size="sm" variant="primary" className="ml-2" onClick={handleUpgrade} disabled={checkoutLoading}>
+                {checkoutLoading ? "Opening..." : "Upgrade"}
               </Button>
-            ) : null}
-
-            <span className="text-sm text-zinc-500">7.4/10</span>
-            <Button size="sm" variant="primary" className="ml-2" onClick={() => setShowModal(true)}>
-              Upgrade
-            </Button>
-          </div>
+              {/* Sign-in removed - app no longer uses auth UI */}
+            </div>
         </div>
       </header>
 
@@ -329,41 +226,48 @@ export default function PremiumDatingAdvicePage() {
                   </svg>
                 </div>
                 <div>
-                  <div className="text-sm font-semibold flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="h-4 w-4 text-amber-400" fill="currentColor" aria-hidden="true">
-                      <path d="M12 .587l3.668 7.431 8.2 1.192-5.934 5.787 1.402 8.176L12 18.896l-7.336 3.876 1.402-8.176L.132 9.21l8.2-1.192z" />
-                    </svg>
-                    <span>Spark</span>
-                  </div>
+                  <div className="text-sm font-semibold">Sparky</div>
+                  <div className="text-xs text-zinc-500">Premium advice</div>
                 </div>
               </div>
               <div className="text-xs text-zinc-500">Online</div>
             </div>
 
-            {/* Messages + sticky composer: make chat follow and composer stay visible */}
-            <div className="flex flex-col h-[56vh]">
-              <ChatThread messages={messages} />
-
-              <div className="sticky bottom-0 border-t border-zinc-100 bg-white px-4 py-4">
-                <div className="flex items-end gap-2">
-                  <div className="flex-1">
-                    <Composer
-                      mode={mode}
-                      setMode={(m) => setMode(m as 'dating_advice' | 'rizz' | 'strategy')}
-                      input={input}
-                      setInput={(s) => setInput(s)}
-                      onSend={(t) => pushUser(t)}
-                      onQuickAnalyze={(t) => pushStrategy(t)}
-                      loading={loading}
-                      disabledSend={dailyLimitReached}
-                      placeholder={placeholderText}
-                      isPremium={!!entitlements?.isPremium}
-                    />
+            {/* Messages */}
+            <div
+              ref={listRef}
+              className="h-[56vh] overflow-y-auto px-4 py-4"
+            >
+              <div className="space-y-3">
+                {messages.map((m) => (
+                  <div key={m.id} className={cx("flex", m.role === "user" ? "justify-end" : "justify-start")}>
+                    <div className={cx("max-w-[85%] rounded-3xl px-4 py-3 text-[15px] leading-relaxed shadow-sm whitespace-pre-line", m.role === "user" ? "user-bubble" : "assistant-bubble")}>
+                      {m.text}
+                    </div>
                   </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Quick actions removed */}
+
+            {/* Composer */}
+            <div className="border-t border-zinc-100 bg-white px-4 py-4">
+              <div className="flex items-end gap-2">
+                <div className="flex-1">
+                  <Composer
+                    mode={mode}
+                    setMode={(m) => setMode(m as 'dating_advice' | 'rizz' | 'strategy')}
+                    input={input}
+                    setInput={(s) => setInput(s)}
+                    onSend={(t) => pushUser(t)}
+                    onQuickAnalyze={(t) => pushStrategy(t)}
+                    loading={loading}
+                    placeholder={placeholderText}
+                  />
                 </div>
               </div>
             </div>
-            {/* errors are logged to console (no UI error pane) */}
           </div>
 
           {/* Side panel: show only after conversation is finished */}
@@ -420,7 +324,7 @@ export default function PremiumDatingAdvicePage() {
                 <div className="text-sm font-semibold">Conversation in progress</div>
                 <p className="mt-3 text-sm text-zinc-600">Finish the conversation to see insights and suggested replies.</p>
                 <div className="mt-4">
-                  <Button type="button" onClick={() => { setShowInsights(true); if (entitlements && !entitlements.isPremium) { setShowModal(true); setUpgradeShownThisConversation(true); } }} className="w-full" variant="primary" size="md">
+                  <Button type="button" onClick={() => setShowInsights(true)} className="w-full" variant="primary" size="md">
                     Finish conversation
                   </Button>
                 </div>
@@ -429,71 +333,10 @@ export default function PremiumDatingAdvicePage() {
           )}
         </section>
 
-        {/* Premium modal */}
-        {showModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center">
-            <div className="absolute inset-0 bg-black/40" onClick={() => setShowModal(false)} />
-                <div className="relative z-10 w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl">
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-                    <div className="lg:col-span-2">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="text-2xl font-bold">Spark Premium</div>
-                          <div className="mt-1 text-sm text-zinc-500">Unlimited conversations, advanced coaching, and priority support.</div>
-                        </div>
-                        <button className="text-zinc-500" onClick={() => setShowModal(false)}>✕</button>
-                      </div>
-
-                      <div className="mt-6 flex items-center gap-6">
-                        <div className="text-4xl font-extrabold">$19<span className="text-base font-medium text-zinc-400">/mo</span></div>
-                        <div className="rounded-full px-3 py-1 text-xs font-semibold text-white" style={{ background: 'linear-gradient(90deg,#ff7a59,#ff4d8d)' }}>Popular</div>
-                      </div>
-
-                      <ul className="mt-6 space-y-3 text-sm text-zinc-700">
-                        <li>• Unlimited Spark conversations every day</li>
-                        <li>• Advanced, richer coaching replies (more options + deeper steps)</li>
-                        <li>• Priority model capacity and faster responses</li>
-                        <li>• Tone controls, date plans, and follow-up sequences</li>
-                      </ul>
-
-                      <div className="mt-6 text-sm text-zinc-500">Secure checkout by Stripe.</div>
-                    </div>
-
-                    <div className="lg:col-span-1">
-                      <div className="rounded-xl border border-zinc-100 p-4 shadow-sm bg-linear-to-br from-white to-zinc-50">
-                        <div className="text-xs text-zinc-500">Your plan</div>
-                        <div className="mt-2 text-lg font-semibold">Spark Premium</div>
-                        <div className="mt-3">
-                          <Button
-                            type="button"
-                            className="w-full"
-                            variant="primary"
-                            size="md"
-                            onClick={async () => {
-                              try {
-                                const url = await createCheckoutSession(sessionId);
-                                // open checkout in new tab
-                                window.open(url, '_blank');
-                                setShowModal(false);
-                              } catch (err) {
-                                console.error('checkout error', err);
-                                alert('Failed to start checkout. Please try again.');
-                              }
-                            }}
-                          >
-                            Upgrade & Checkout
-                          </Button>
-                        </div>
-                        <div className="mt-3 text-xs text-zinc-400">No commitment — cancel anytime.</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-          </div>
-        )}
+        {/* Premium modal removed */}
 
         <footer className="mt-10 text-center text-xs text-zinc-400">
-          © {new Date().getFullYear()} Sparkd • Premium UI (backend coming next)
+          © {new Date().getFullYear()} Sparky • Premium UI (backend coming next)
         </footer>
       </main>
     </div>

@@ -33,19 +33,55 @@ export async function fetchAdvice(payload: any): Promise<AdviceResponse> {
       body: JSON.stringify(body),
     });
 
-    const text = await res.text();
+    const rawText = await res.text();
     let data: any = null;
+
     try {
-      data = text ? JSON.parse(text) : null;
-    } catch (e) {
-      data = { raw: text };
+      data = rawText ? JSON.parse(rawText) : null;
+    } catch {
+      // backend might be returning plain text
     }
 
+    console.log("[advice] status:", res.status);
+    console.log("[advice] raw:", rawText);
+    console.log("[advice] json:", data);
+
+    // normalize possible response shapes
+    const advice =
+      (data?.advice && String(data.advice)) ||
+      (data?.text && String(data.text)) ||
+      (data?.message && String(data.message)) ||
+      (data?.result?.advice && String(data.result.advice)) ||
+      (data?.result?.text && String(data.result.text)) ||
+      (data?.output && String(data.output)) ||
+      "";
+
+    // If backend gave an error, don't show "returned empty"
     if (!res.ok) {
-      throw { status: res.status, body: data, raw: text };
+      const errMsg =
+        (data?.error && String(data.error)) ||
+        (data?.message && String(data.message)) ||
+        `Request failed (${res.status})`;
+      throw new Error(errMsg);
     }
 
-    return data as AdviceResponse;
+    // If success but empty advice, surface the real payload for debugging
+    if (!advice.trim()) {
+      throw new Error(
+        `Backend returned success but no advice text. Keys: ${Object.keys(data || {}).join(", ")}`
+      );
+    }
+
+    // build a normalized response preserving common fields
+    const out: AdviceResponse = {
+      message: advice,
+      insights: data?.insights,
+      strategy: data?.strategy,
+      replies: data?.replies,
+      datePlan: data?.datePlan,
+    };
+
+    return out;
   } catch (err: any) {
     // Network error or fetch failed — provide a local mock so the app still works offline.
     await new Promise((r) => setTimeout(r, 700));
