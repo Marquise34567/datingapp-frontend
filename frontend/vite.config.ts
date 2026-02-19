@@ -5,7 +5,8 @@ import react from '@vitejs/plugin-react';
 // when set (e.g. in your shell or npm scripts), otherwise falls back to
 // http://localhost:8080 which should match your backend dev server.
 export default defineConfig(() => {
-  const backend = process.env.BACKEND_URL || 'http://localhost:8080';
+  // prefer VITE_BACKEND_URL (set in .env or Vercel preview env), fallback to localhost for dev
+  const backend = process.env.VITE_BACKEND_URL || process.env.BACKEND_URL || 'http://localhost:8080';
 
   return {
     plugins: [react()],

@@ -10,9 +10,9 @@ export type Entitlements = {
 
 export async function fetchEntitlements(sessionId?: string): Promise<Entitlements> {
   try {
-    const url = new URL('/api/me/entitlements', window.location.origin);
-    if (sessionId) url.searchParams.set('sessionId', sessionId);
-    const res = await fetch(url.toString(), { method: 'GET' });
+    let path = '/api/me/entitlements';
+    if (sessionId) path += `?sessionId=${encodeURIComponent(sessionId)}`;
+    const res = await fetch(path, { method: 'GET' });
     const text = await res.text();
     try {
       const data = text ? JSON.parse(text) : {};
