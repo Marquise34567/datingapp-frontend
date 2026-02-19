@@ -518,5 +518,5 @@ app.post('/api/screenshot-coach', upload.single('image'), async (req, res) => {
 const PORT = Number(process.env.PORT) || 8080;
 
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`Dating Advice API listening on 0.0.0.0:${PORT}`);
 });
