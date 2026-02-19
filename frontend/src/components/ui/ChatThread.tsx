@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useRef } from 'react';
 
 type Msg = { id: string; role: 'user' | 'assistant'; text: string; coach?: any };
 
@@ -8,25 +8,11 @@ export default function ChatThread({ messages, containerRef }: { messages: Msg[]
 
   const ref = containerRef ?? internalRef;
 
-  const isNearBottom = () => {
-    const el = ref.current;
-    if (!el) return true;
-    const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
-    return distance < 120; // px threshold
-  };
 
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-
-    const shouldAutoScroll = isNearBottom();
-    if (shouldAutoScroll) {
-      endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-    }
-  }, [messages.length]);
+  // Removed auto-scroll logic; parent manages scrolling now.
 
   return (
-    <div ref={ref} className="flex-1 overflow-y-auto px-4 py-4 pb-40">
+    <div ref={ref} className="flex-1 overflow-y-auto px-4 py-4">
       <div className="space-y-3">
         {messages.map((m) => (
           <div key={m.id} className={m.role === 'user' ? 'flex justify-end' : 'flex justify-start'}>

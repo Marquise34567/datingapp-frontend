@@ -364,7 +364,9 @@ export default function PremiumDatingAdvicePage() {
 
             {/* Messages + composer: messages scroll, composer stays pinned at bottom */}
             <div className="flex h-full min-h-0 flex-col">
-              <ChatThread messages={messages} containerRef={listRef} />
+              <div ref={listRef} className="flex-1 min-h-0 overflow-y-auto px-6 pt-6 pb-28">
+                <ChatThread messages={messages} containerRef={listRef} />
+              </div>
 
               <div className="shrink-0 z-20 border-t border-black/5 bg-white/80 backdrop-blur-sm px-0 py-3">
                 <div className="flex items-end gap-2">
