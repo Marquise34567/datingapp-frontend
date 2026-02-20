@@ -3,23 +3,42 @@ import cors from 'cors';
 
 const app = express();
 
-const allowedOrigins = [
-  'http://localhost:5173',
-  'http://localhost:5174',
-  'http://localhost:5175',
-  'https://YOUR-FRONTEND-DOMAIN.com',
+// IMPORTANT: CORS must be configured BEFORE any routes or auth middleware
+const ALLOWED_ORIGINS = [
+  "https://sparkdd.live",
+  "https://www.sparkdd.live",
+  "http://localhost:3000",
+  // example preview domain seen in your screenshot — keep this entry for previews
+  "https://datingapp-frontend-frontend-azkdqby1e-quises-projects-89577714.vercel.app",
 ];
 
 app.use(
   cors({
-    origin: (origin, callback) => {
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) return callback(null, true);
-      return callback(new Error('CORS policy: Origin not allowed'));
+    origin: (origin, cb) => {
+      // allow non-browser tools (curl, postman)
+      if (!origin) return cb(null, true);
+
+      if (ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
+
+      // allow any vercel preview domain for this project (helps with ephemeral preview URLs)
+      const isAllowedVercelPreview =
+        origin?.endsWith('.vercel.app') && origin.includes('datingapp-frontend-frontend');
+
+      if (isAllowedVercelPreview) return cb(null, true);
+
+      return cb(new Error(`CORS blocked origin: ${origin}`));
     },
     credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
+
+// handle preflight for ALL routes
+app.options("*", cors());
+
+// parse JSON bodies
+app.use(express.json());
 
 // Health endpoints for Railway
 app.get('/', (_req, res) => {
