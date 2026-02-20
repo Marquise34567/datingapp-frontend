@@ -3,7 +3,6 @@ import React from "react";
 type Props = {
   title?: string;
   message?: string;
-  etaText?: string;
   statusUrl?: string;
   onReturnHome?: () => void;
 };
@@ -11,7 +10,6 @@ type Props = {
 export default function MaintenanceOverlay({
   title = "Sparkd is getting an upgrade",
   message = "We’re polishing the coach for a smoother, smarter experience — hang tight.",
-  etaText = "Estimated remaining: 4m 48s",
   statusUrl,
   onReturnHome,
 }: Props) {
@@ -46,10 +44,7 @@ export default function MaintenanceOverlay({
             {message}
           </p>
 
-          <div className="mt-5 inline-flex items-center rounded-full border border-white/15 bg-white/10 px-3 py-2 text-xs text-white/80">
-            <span className="mr-2 inline-block h-2 w-2 animate-pulse rounded-full bg-emerald-400" />
-            {etaText}
-          </div>
+          {/* ETA removed — show only message and actions */}
 
           <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <button
