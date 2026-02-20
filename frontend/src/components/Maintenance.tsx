@@ -1,32 +1,3 @@
-import React from "react";
-
-export default function Maintenance() {
-  return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 backdrop-blur-2xl pointer-events-auto">
-      <div className="mx-4 w-full max-w-2xl rounded-3xl bg-gradient-to-br from-white/6 to-white/4 border border-white/8 p-10 shadow-2xl">
-        <div className="flex items-center gap-4">
-          <img src="/sparkdd-favicon.svg" alt="Sparkd" className="h-14 w-14 rounded-lg shadow-md" />
-          <div>
-            <h1 className="text-3xl tracking-tight text-white font-serif">Working on improving your coach</h1>
-            <p className="mt-1 text-sm text-zinc-300">We’re enhancing the coach to deliver better, personalized advice — thanks for your patience.</p>
-          </div>
-        </div>
-
-        <div className="mt-6 text-zinc-200">
-          <p className="text-base leading-relaxed">The coach is temporarily offline while we roll out improvements. You can still browse the site — chat responses may be limited.</p>
-        </div>
-
-        <div className="mt-6 flex items-center justify-between">
-          <div className="text-sm text-zinc-400">Estimated return: shortly</div>
-          <div className="flex items-center gap-3">
-            <a href="/" className="text-sm text-zinc-300 underline">Return home</a>
-            <a href="https://twitter.com/sparkdd" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-full bg-amber-500 px-4 py-2 text-sm font-semibold text-zinc-900 hover:brightness-105">Status</a>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 import React, { useEffect, useState } from "react";
 
 const FIVE_MINUTES_MS = 5 * 60 * 1000;
@@ -62,13 +33,13 @@ export default function Maintenance() {
   const backTime = new Date(Date.now() + remainingMs).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-gradient-to-b from-zinc-900/70 to-zinc-900/80 backdrop-blur-md">
-      <div className="mx-4 w-full max-w-2xl rounded-3xl bg-gradient-to-br from-white/5 to-white/3 border border-white/8 p-10 shadow-2xl backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/40">
+      <div className="mx-4 w-full max-w-2xl rounded-3xl bg-gradient-to-br from-white/6 to-white/3/40 border border-white/10 p-10 shadow-2xl backdrop-blur-sm transform-gpu">
         <div className="flex items-center gap-4">
-          <img src="/sparkdd-favicon.svg" alt="Sparkd" className="h-14 w-14 rounded-lg shadow-md" />
+          <img src="/sparkdd-favicon.svg" alt="Sparkd" className="h-14 w-14 rounded-xl shadow-lg ring-1 ring-white/10" />
           <div>
-            <h1 className="text-3xl tracking-tight text-white font-serif">Sparkd is getting an upgrade</h1>
-            <p className="mt-1 text-sm text-zinc-300">We're improving the coach for a better experience.</p>
+            <h1 className="text-3xl tracking-tight text-white font-serif gradient-text">Sparkd is getting an upgrade</h1>
+            <p className="mt-1 text-sm text-zinc-300">We're polishing the coach for a smoother, smarter experience.</p>
           </div>
         </div>
 
@@ -79,13 +50,13 @@ export default function Maintenance() {
         </div>
 
         <div className="mt-6 flex items-center justify-between">
-          <div className="text-sm text-zinc-400">Estimated remaining: {formatMs(remainingMs)} — back by {backTime}</div>
+          <div className="text-sm text-zinc-300">Estimated remaining: <span className="font-semibold text-white">{formatMs(remainingMs)}</span> — back by <span className="font-medium text-white">{backTime}</span></div>
           <div className="flex items-center gap-3">
-            <a href="#" onClick={(e) => e.preventDefault()} className="inline-flex items-center gap-2 rounded-full bg-amber-500 px-4 py-2 text-sm font-semibold text-zinc-900 hover:brightness-105">
+            <a href="#" onClick={(e) => e.preventDefault()} className="inline-flex items-center gap-2 rounded-full bg-amber-500 px-4 py-2 text-sm font-semibold text-zinc-900 shadow-md hover:brightness-105">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden="true"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5"/></svg>
               Check status
             </a>
-            <a href="/" className="text-sm text-zinc-300 underline">Return home</a>
+            <a href="/" className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium border border-white/6 text-zinc-200 hover:bg-white/2">Return home</a>
           </div>
         </div>
       </div>
