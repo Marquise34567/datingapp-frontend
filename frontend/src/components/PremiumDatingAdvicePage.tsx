@@ -262,15 +262,15 @@ export default function PremiumDatingAdvicePage() {
             </div>
             <div className="leading-tight">
               <div className="text-sm font-semibold gradient-text">Sparkd</div>
-              <div className="text-xs text-zinc-500">Modern dating coach</div>
+              <div className="text-xs text-white/70">Modern dating coach</div>
             </div>
           </div>
 
               <div className="flex items-center gap-2">
-              <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+              <span className="rounded-full border border-emerald-200 bg-emerald-800/30 px-3 py-1 text-xs font-semibold text-emerald-300">
                 Good
               </span>
-              <span className="text-sm text-zinc-500">7.4/10</span>
+              <span className="text-sm text-white/70">7.4/10</span>
               <Button size="sm" variant="primary" className="ml-2" onClick={() => setShowModal(true)} disabled={checkoutLoading}>
                 {checkoutLoading ? "Opening..." : "Upgrade"}
               </Button>
