@@ -7,7 +7,7 @@
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "dev:backend": "ts-node-dev --respawn --transpile-only src/index.ts",
     "dev:frontend": "npm --prefix frontend run dev",
-    "build": "tsc -p .",
+    "build": "npx tsc -p .",
     "postinstall": "npm run build",
     "start": "node dist/index.js",
     "test:screenshot": "node scripts/test_screenshot_coach.js"
